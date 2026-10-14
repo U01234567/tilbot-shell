@@ -1,0 +1,110 @@
+# Every service as it runs for real.
+# Start with `python start_shell.py up`: it adds compose.dev.yaml when SHELL_ENV=development
+# and passes the pinned commits from components.toml (TILBOT_* and VECTOR_SIMILARITY_INTENT_*).
+# Only Caddy publishes ports; everything else is reachable inside the Docker network only.
+name: tilbot-shell
+
+x-tilbot: &tilbot
+  image: tilbot-shell/tilbot:${TILBOT_COMMIT:?start with python start_shell.py}
+  build:
+    context: ./tilbot
+    args:
+      TILBOT_REPO: ${TILBOT_REPO}
+      TILBOT_COMMIT: ${TILBOT_COMMIT}
+  restart: unless-stopped
+
+services:
+  caddy:
+    image: caddy:2.10
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      SHELL_HOST: ${SHELL_HOST}
+      BOT_HOST: ${BOT_HOST}
+    volumes:
+      - ./proxy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - static:/srv/static:ro
+      - caddy-data:/data
+
+  shell:
+    build: ./shell
+    restart: unless-stopped
+    environment:
+      SHELL_ENV: ${SHELL_ENV}
+      SHELL_HOST: ${SHELL_HOST}
+      BOT_HOST: ${BOT_HOST}
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY}
+      BRIDGE_SECRET: ${BRIDGE_SECRET}
+      FIELD_ENCRYPTION_KEY: ${FIELD_ENCRYPTION_KEY}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      PROJECT_DIR: /project
+    volumes:
+      - ./project:/project:ro
+      - static:/app/staticfiles
+    depends_on: [db]
+
+  db:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - db:/var/lib/postgresql/data
+
+  tilbot-frontend:
+    <<: *tilbot
+    working_dir: /tilbot/frontend
+    command: ["node", "build"]
+
+  tilbot-backend:
+    <<: *tilbot
+    working_dir: /tilbot/backend
+    command: ["yarn", "tsx", "server.ts"]
+    environment:
+      LISTEN_PORT: "8000"
+      MONGO_DB: mongodb://mongo/tilbot
+      SESSION_SECRET: ${TILBOT_SESSION_SECRET}
+      COOKIE_SECRET: ${TILBOT_SESSION_SECRET}
+      SHELL_LOG_URL: http://shell:8000/bridge/log   # patch 0002: transcripts go to the shell
+      BRIDGE_SECRET: ${BRIDGE_SECRET}
+    volumes:
+      - tilbot-projects:/tilbot/backend/projects
+      - tilbot-public:/tilbot/backend/proj_pub
+    depends_on: [mongo]
+
+  mongo:
+    image: mongo:8.3   # the version in Tilbot's own compose file
+    restart: unless-stopped
+    volumes:
+      - mongo:/data/db
+
+  # Intent recognition, a fixed part of the framework (phase 3). Until phase 3 is built it is off by
+  # default so developers don't download its model for nothing: start it with --profile phase3.
+  vector-similarity-intent:
+    profiles: [phase3]
+    build:
+      context: ./vector-similarity-intent
+      args:
+        REPO: ${VECTOR_SIMILARITY_INTENT_REPO}
+        COMMIT: ${VECTOR_SIMILARITY_INTENT_COMMIT}
+    restart: unless-stopped
+    environment:
+      PORT: "8081"
+      MODELNAME: ${INTENT_MODEL:-NetherlandsForensicInstitute/robbert-2022-dutch-sentence-transformers}   # a sentence-transformers model for the study's language
+    volumes:
+      - models:/root/.cache/huggingface   # the model downloads once, then works offline
+
+volumes:
+  static:
+  caddy-data:
+  db:
+  mongo:
+  tilbot-projects:
+  tilbot-public:
+  models:

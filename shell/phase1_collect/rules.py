@@ -1,0 +1,19 @@
+from config.project import Item
+
+SAVED = "saved"  # Tilbot connector: on to the next question
+HIGH = "high"  # Tilbot connector: this item's follow-up questions
+
+
+def parse_answer(item: Item, raw: str) -> int:
+    """Return the answer as a number on the item's scale; raise ValueError otherwise."""
+    value = int(raw)
+    if not item.scale_min <= value <= item.scale_max:
+        raise ValueError(f"{item.id}: {value} is not on the scale {item.scale_min}-{item.scale_max}")
+    return value
+
+
+def route_after(item: Item, value: int) -> str:
+    """Return the Tilbot connector to follow after this answer."""
+    if item.threshold is not None and value >= item.threshold:
+        return HIGH
+    return SAVED

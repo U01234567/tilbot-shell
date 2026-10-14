@@ -1,0 +1,8 @@
+# Runtime packages of the shell, each with the reason it is here.
+# "~=X.Y.0" allows patch updates only. A minor or major upgrade is a decision in docs/decisions.md.
+# After changing this file: python start_shell.py lock
+
+django~=5.2.0             # the web framework; long-term support with security fixes until April 2028
+psycopg[binary]~=3.2.0    # Django's driver for Postgres
+cryptography~=45.0.0      # encrypts answers and transcripts in the database (records/fields.py)
+gunicorn~=23.0.0          # runs Django in production

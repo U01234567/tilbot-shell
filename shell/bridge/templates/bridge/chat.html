@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}{{ study.name }}{% endblock %}
+{% block page_class %}chat{% endblock %}
+{% block content %}
+  <iframe src="{{ bot_url }}" title="{{ study.name }}"></iframe>
+  <form method="post" action="{% url 'sign_out' %}">
+    {% csrf_token %}
+    <button type="submit" class="quiet">{{ study.texts.sign_out }}</button>
+  </form>
+{% endblock %}

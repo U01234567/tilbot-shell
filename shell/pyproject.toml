@@ -1,0 +1,4 @@
+# Test settings. Run the tests with: python start_shell.py exec shell pytest
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"
+python_files = ["tests.py"]

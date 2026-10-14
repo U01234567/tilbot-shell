@@ -1,0 +1,64 @@
+diff --git a/backend/projectcontroller.ts b/backend/projectcontroller.ts
+index ed35b8f..84c579e 100644
+--- a/backend/projectcontroller.ts
++++ b/backend/projectcontroller.ts
+@@ -13,10 +13,12 @@ export class ServerControllerLookup
+ {
+   private db: VariableDb;
+   private isElectron: boolean;
++  private participantId: string;
+ 
+-  constructor(db: VariableDb, isElectron: boolean = false) {
++  constructor(db: VariableDb, isElectron: boolean = false, participantId: string = "") {
+     this.db = db;
+     this.isElectron = isElectron;
++    this.participantId = participantId;
+   }
+ 
+   private getAudioUploadFilename(audioBlob: Blob): string {
+@@ -112,6 +114,10 @@ export class ServerControllerLookup
+       data.append(key, value);
+     }
+ 
++    if (this.participantId !== "") {
++      data.append("participant_id", this.participantId);
++    }
++
+     const request: RequestInfo = new Request(fullUrl, {
+       method: "POST",
+       headers: headers,
+diff --git a/backend/server.ts b/backend/server.ts
+index 984bdba..b5b8a8a 100644
+--- a/backend/server.ts
++++ b/backend/server.ts
+@@ -512,6 +512,8 @@ const projectControllers: Map<
+ app.get("/api/create_conversation", async (req, res) => {
+   const query: any = req.query;
+   const projectId = query.id;
++  // Opaque participant reference from the embedding site, forwarded to external links.
++  const participantId: string = query.pid ?? "";
+   const project = await ProjectModel.getById(projectId, {
+     active: true,
+     status: 1,
+@@ -523,7 +525,7 @@ app.get("/api/create_conversation", async (req, res) => {
+   const db = new VariableDb(p + "/variables.db");
+ 
+   const projectController = new LocalProjectController(
+-    new ServerControllerLookup(db),
++    new ServerControllerLookup(db, false, participantId),
+     new ServerControllerOutput(),
+     (project.settings.logging_enabled) ? new Logger(projectId) : new NonLogger(),
+     project
+diff --git a/frontend/src/routes/+page.ts b/frontend/src/routes/+page.ts
+index 93771a5..602828e 100644
+--- a/frontend/src/routes/+page.ts
++++ b/frontend/src/routes/+page.ts
+@@ -41,7 +41,7 @@ export const load: PageLoad = ({ url, fetch }) => {
+       }
+       try {
+         const response = await fetch(
+-          `/api/create_conversation?id=${encodeURIComponent(id ?? "")}`
++          `/api/create_conversation?id=${encodeURIComponent(id ?? "")}&pid=${encodeURIComponent(runtimeContext.participantId ?? "")}`
+         );
+ 
+         if (response.ok) {

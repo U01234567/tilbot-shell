@@ -1,0 +1,97 @@
+diff --git a/backend/server.ts b/backend/server.ts
+index b5b8a8a..a112e38 100644
+--- a/backend/server.ts
++++ b/backend/server.ts
+@@ -34,6 +34,8 @@ import {
+   ServerControllerOutput,
+ } from "./projectcontroller.ts";
+ import { Logger } from "./logger.ts";
++import { ShellLogger } from "./shelllogger.ts";
++import type { ProjectControllerLoggerInterface } from "../common/projectcontroller/types";
+ 
+ import { VariableDb } from "../common/variabledb.ts";
+ import { NonLogger } from "../common/projectcontroller/nonlogger.ts";
+@@ -527,7 +529,7 @@ app.get("/api/create_conversation", async (req, res) => {
+   const projectController = new LocalProjectController(
+     new ServerControllerLookup(db, false, participantId),
+     new ServerControllerOutput(),
+-    (project.settings.logging_enabled) ? new Logger(projectId) : new NonLogger(),
++    chooseLogger(project, projectId, participantId),
+     project
+   );
+ 
+@@ -605,6 +607,18 @@ app.get("/ws/chat", { websocket: true }, async (socket, req) => {
+   });
+ });
+ 
++// Conversation events go to SHELL_LOG_URL when it is set, otherwise to MongoDB if the project logs.
++function chooseLogger(
++  project: any,
++  projectId: string,
++  participantId: string
++): ProjectControllerLoggerInterface {
++  if (process.env.SHELL_LOG_URL) {
++    return new ShellLogger(process.env.SHELL_LOG_URL, process.env.BRIDGE_SECRET ?? "", participantId);
++  }
++  return project.settings.logging_enabled ? new Logger(projectId) : new NonLogger();
++}
++
+ async function stop_bot(projectId: string) {
+   console.log(`stopping ${projectId}`);
+ 
+diff --git a/backend/shelllogger.ts b/backend/shelllogger.ts
+new file mode 100644
+index 0000000..bab85a3
+--- /dev/null
++++ b/backend/shelllogger.ts
+@@ -0,0 +1,50 @@
++import { randomUUID } from "crypto";
++import type { ProjectControllerLoggerInterface } from "../common/projectcontroller/types.ts";
++
++/**
++ * Sends every conversation event to an external server (for example a site that embeds Tilbot)
++ * instead of storing it in MongoDB. Used when SHELL_LOG_URL is set.
++ *
++ * Events are posted as form fields: participant_id, conversation, seq (order within the
++ * conversation), event, detail and bridge_secret (from BRIDGE_SECRET).
++ */
++export class ShellLogger implements ProjectControllerLoggerInterface {
++  private readonly url: string;
++  private readonly secret: string;
++  private readonly conversation: string = randomUUID();
++  private participantId: string;
++  private seq: number = 0;
++
++  constructor(url: string, secret: string, participantId: string) {
++    this.url = url;
++    this.secret = secret;
++    this.participantId = participantId;
++  }
++
++  log(event: string, detail = ""): void {
++    const data = new FormData();
++    data.append("participant_id", this.participantId);
++    data.append("conversation", this.conversation);
++    data.append("seq", String(this.seq++));
++    data.append("event", event);
++    data.append("detail", detail);
++    data.append("bridge_secret", this.secret);
++
++    fetch(this.url, { method: "POST", body: data })
++      .then((res) => {
++        if (!res.ok) {
++          console.error(`ShellLogger: event '${event}' rejected with ${res.status}`);
++        }
++      })
++      .catch((error) => console.error(`ShellLogger: event '${event}' not delivered`, error));
++  }
++
++  set_participant_id(pid: string): void {
++    this.participantId = pid;
++  }
++
++  async log_audio(audio: Blob): Promise<void> {
++    // Refuse loudly rather than drop the recording silently.
++    throw new Error("ShellLogger does not store audio");
++  }
++}

@@ -1,0 +1,5 @@
+/* The study's colours and font. Loaded after the shell's defaults, so these win. */
+:root {
+  --brand: #6a2c9e;
+  --on-brand: #ffffff;
+}

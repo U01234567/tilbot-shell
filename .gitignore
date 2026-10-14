@@ -1,0 +1,15 @@
+# The real study content and all secrets stay off GitHub.
+/project/
+.env
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+/shell/staticfiles/
+
+# Editors and operating systems
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,14 @@
+# Phase 1. The question texts live in Tilbot's studio; this file holds what the shell decides.
+# Each Processing block "save" in Tilbot sends item = <id>. Every id used there must exist here.
+#
+# scale      the lowest and highest answer allowed; anything else makes Tilbot ask again
+# threshold  an answer at or above this leads to the item's follow-up questions; leave it out for none
+
+[[items]]
+id = "Q01"
+scale = [0, 10]
+threshold = 7
+
+[[items]]
+id = "Q02"
+scale = [0, 10]

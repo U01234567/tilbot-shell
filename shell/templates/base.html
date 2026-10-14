@@ -1,0 +1,15 @@
+{% load static %}<!doctype html>
+<html lang="{{ study.language }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ study.name }}{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'css/shell.css' %}">
+  <link rel="stylesheet" href="{% static 'theme/tokens.css' %}">
+</head>
+<body>
+  <main class="{% block page_class %}page{% endblock %}">
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

@@ -1,0 +1,55 @@
+# Three sites. docs/architecture.md explains this file line by line.
+# SHELL_HOST and BOT_HOST come from .env. Names ending in .localhost need no DNS.
+
+# The shell: sign-up, sign-in and the chat page.
+{$SHELL_HOST} {
+	encode gzip
+	header {
+		Content-Security-Policy "default-src 'self'; frame-src https://{$BOT_HOST}; frame-ancestors 'none'; form-action 'self'; base-uri 'self'; object-src 'none'"
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "same-origin"
+	}
+
+	# Tilbot calls /bridge/ inside the Docker network; from outside it does not exist.
+	handle /bridge/* {
+		respond 404
+	}
+	handle /static/* {
+		uri strip_prefix /static
+		root * /srv/static
+		file_server
+	}
+	handle {
+		reverse_proxy shell:8000
+	}
+}
+
+# Tilbot's chat. Only the shell may show it in a frame, and only what participants need is public.
+{$BOT_HOST} {
+	encode gzip
+	header Content-Security-Policy "frame-ancestors https://{$SHELL_HOST}"
+
+	@public path / /_app/* /favicon.png /images/* /proj_pub/* /api/create_conversation /ws/chat
+	@backend path /api/* /ws/* /proj_pub/*
+
+	handle @public {
+		route {
+			reverse_proxy @backend tilbot-backend:8000
+			reverse_proxy tilbot-frontend:3000
+		}
+	}
+	handle {
+		respond 404
+	}
+}
+
+# Tilbot's researcher dashboard: import a .tilbot file, start and stop the project.
+# Plain HTTP on port 8081, published to 127.0.0.1 by compose.dev.yaml only.
+:8081 {
+	@backend path /api/* /ws/* /proj_pub/*
+	route {
+		reverse_proxy @backend tilbot-backend:8000
+		reverse_proxy tilbot-frontend:3000
+	}
+}

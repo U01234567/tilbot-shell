@@ -1,0 +1,18 @@
+# Only what differs in development. start_shell.py adds this file when SHELL_ENV=development.
+services:
+  shell:
+    volumes:
+      - ./shell:/app   # code changes apply without rebuilding
+    command: >
+      sh -c "pip install --quiet -r requirements-dev.txt
+      && python manage.py migrate
+      && python manage.py collectstatic --noinput
+      && python manage.py runserver 0.0.0.0:8000"
+
+  caddy:
+    ports:
+      - "127.0.0.1:8081:8081"   # Tilbot's researcher dashboard, on this computer only
+
+  db:
+    ports:
+      - "127.0.0.1:5432:5432"   # look into the database with a local client

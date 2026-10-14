@@ -1,0 +1,32 @@
+# Every study setting in one place, for the researcher to check and change.
+# The shell reads this file when it starts: restart the shell after a change.
+
+name = "Example study"   # shown to participants, in their language
+language = "en"          # language of the pages (BCP 47 tag): "en", "nl", ...
+
+[signup]
+age_min = 1                 # to confirm with the research team
+age_max = 150
+genders = ["Male", "Female", "Non-binary", "Other", "Prefer not to say"]
+
+[texts]
+# Every text a participant sees, in the study's language. All keys are required.
+sign_up = "Create account"
+sign_in = "Sign in"
+sign_out = "Sign out"
+your_id = "Your ID"
+write_it_down = "Write this ID down. You need it to sign in, and nobody can look it up for you."
+age = "Age"
+gender = "Gender"
+already_have_id = "I already have an ID"
+no_id_yet = "I don't have an ID yet"
+wrong_id = "Are you sure this is your ID?"
+id_taken = "Someone else just got the same ID. Your new ID is below."
+blocked_title = "Please wait"
+blocked_text = "Too many attempts from this connection. Try again in fifteen minutes."
+back = "Back"
+
+[tilbot]
+# The id of the project in Tilbot's dashboard (http://127.0.0.1:8081/dashboard),
+# shown in the address when you click the globe icon: /?project=<id>.
+project_id = "00000000000000000000000000000000"

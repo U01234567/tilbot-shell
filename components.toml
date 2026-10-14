@@ -1,0 +1,22 @@
+# The components we build on, pinned to an exact commit.
+# This file is the one place for each hash and the reason we chose it.
+#
+# - Use the full 40-character commit hash: Docker needs it to build from git.
+# - Write the repo URL without ".git".
+# - `python start_shell.py updates` shows whether upstream has newer commits.
+# - When moving a pin, update pinned_on and note, and run the tests.
+
+[tilbot]
+repo = "https://github.com/tilbotio/tilbot-refactor"
+commit = "3de07b06dda0d1b46ed7cc4fceea41110cd119e7"
+pinned_on = 2026-10-12
+upstream_version = "2.0.0"   # "version" in Tilbot's package.json
+patches = ["0001-forward-participant", "0002-shell-logger"]
+note = "First pin, the newest commit on 12 Oct 2026. The patches were made against a zip of the same day."
+
+[vector-similarity-intent]
+repo = "https://github.com/tilbotio/vector-similarity-intent"
+commit = "838e038bef7279865563088240ed7965e8a06047"
+pinned_on = 2026-10-12
+patches = []
+note = "Used unchanged; we fork only if matching falls short on a real knowledge base. Not called yet: phase 3 is still a placeholder."

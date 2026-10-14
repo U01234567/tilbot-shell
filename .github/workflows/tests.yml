@@ -1,0 +1,41 @@
+# Runs the shell's tests on every push. Coding style is guided in prompts, not checked here;
+# these checks protect data: the tests, and that every model change has a migration.
+name: tests
+on: [push, pull_request]
+
+jobs:
+  shell:
+    runs-on: ubuntu-latest
+    services:
+      db:
+        image: postgres:17
+        env:
+          POSTGRES_DB: shell
+          POSTGRES_USER: shell
+          POSTGRES_PASSWORD: test
+        ports: ["5432:5432"]
+        options: --health-cmd pg_isready --health-interval 5s --health-retries 10
+    env:
+      SHELL_ENV: development
+      SHELL_HOST: localhost
+      BOT_HOST: bot.localhost
+      DJANGO_SECRET_KEY: test-only
+      BRIDGE_SECRET: test-only
+      FIELD_ENCRYPTION_KEY: 6T3USCvY4YwZcidywXHLWGlx9ttsEtjmVG0LU9ZQsSQ=   # test-only key, never used for real data
+      POSTGRES_DB: shell
+      POSTGRES_USER: shell
+      POSTGRES_PASSWORD: test
+      POSTGRES_HOST: localhost
+      PROJECT_DIR: ../project-example   # also proves the example project loads
+    defaults:
+      run:
+        working-directory: shell
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install --require-hashes -r requirements.lock
+      - run: pip install -r requirements-dev.txt
+      - run: python manage.py makemigrations --check --dry-run
+      - run: pytest
