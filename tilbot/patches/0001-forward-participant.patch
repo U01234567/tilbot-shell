@@ -1,5 +1,5 @@
 diff --git a/backend/projectcontroller.ts b/backend/projectcontroller.ts
-index ed35b8f..84c579e 100644
+index ed35b8f..9439a72 100644
 --- a/backend/projectcontroller.ts
 +++ b/backend/projectcontroller.ts
 @@ -13,10 +13,12 @@ export class ServerControllerLookup
@@ -16,26 +16,29 @@ index ed35b8f..84c579e 100644
    }
  
    private getAudioUploadFilename(audioBlob: Blob): string {
-@@ -112,6 +114,10 @@ export class ServerControllerLookup
+@@ -112,6 +114,13 @@ export class ServerControllerLookup
        data.append(key, value);
      }
  
-+    if (this.participantId !== "") {
++    // Calls to the embedding site (SHELL_URL) say who the participant is and carry its secret,
++    // so researchers never type the secret into a flowchart. Other sites get neither.
++    if (process.env.SHELL_URL && fullUrl.startsWith(process.env.SHELL_URL)) {
 +      data.append("participant_id", this.participantId);
++      data.append("bridge_secret", process.env.BRIDGE_SECRET ?? "");
 +    }
 +
      const request: RequestInfo = new Request(fullUrl, {
        method: "POST",
        headers: headers,
 diff --git a/backend/server.ts b/backend/server.ts
-index 984bdba..b5b8a8a 100644
+index 984bdba..655b3c7 100644
 --- a/backend/server.ts
 +++ b/backend/server.ts
 @@ -512,6 +512,8 @@ const projectControllers: Map<
  app.get("/api/create_conversation", async (req, res) => {
    const query: any = req.query;
    const projectId = query.id;
-+  // Opaque participant reference from the embedding site, forwarded to external links.
++  // Opaque participant reference from the embedding site, sent back to it on its own links.
 +  const participantId: string = query.pid ?? "";
    const project = await ProjectModel.getById(projectId, {
      active: true,

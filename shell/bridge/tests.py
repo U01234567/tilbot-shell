@@ -2,6 +2,7 @@ import pytest
 from django.db import connection
 
 from accounts.models import Participant
+from accounts.session import SESSION_KEY
 from bridge.tokens import make_token
 from config.project import Item, Study
 from records.models import Answer
@@ -13,7 +14,7 @@ STUDY = Study(
     tilbot_project_id="0" * 32,
     age_min=1,
     age_max=150,
-    genders=("Vrouw",),
+    genders=("Other",),
     texts={},
     items={"Q01": Item(id="Q01", scale_min=0, scale_max=10, threshold=7)},
 )
@@ -27,7 +28,7 @@ def study(settings):
 
 @pytest.fixture
 def participant(db):
-    return Participant.objects.create(code="K7QM", age=50, gender="Vrouw")
+    return Participant.objects.create(code="K7QM", age=50, gender="Other")
 
 
 def post_answer(client, participant, answer, secret=SECRET):
@@ -73,3 +74,11 @@ def test_forged_token_is_refused(client, participant):
         "bridge_secret": SECRET,
     })
     assert response.status_code == 400
+
+
+def test_chat_without_a_linked_project_says_so(client, participant):
+    session = client.session
+    session[SESSION_KEY] = participant.pk
+    session.save()
+    response = client.get("/chat")
+    assert "No Tilbot project is linked yet" in response.content.decode()

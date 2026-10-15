@@ -17,17 +17,17 @@ def test_normalize(typed, stored):
 
 
 @pytest.mark.django_db
-def test_sign_up_creates_the_participant_with_the_shown_code(client):
+def test_sign_up_creates_the_participant_with_the_shown_code(client, settings):
     client.get("/sign-up")
     shown = client.session["new_code"]
-    response = client.post("/sign-up", {"age": "50", "gender": "Vrouw"})
+    response = client.post("/sign-up", {"age": settings.STUDY.age_min, "gender": settings.STUDY.genders[0]})
     assert response.status_code == 302
     assert Participant.objects.get().code == shown
 
 
 @pytest.mark.django_db
 def test_known_code_signs_in(client):
-    Participant.objects.create(code="K7QM", age=50, gender="Vrouw")
+    Participant.objects.create(code="K7QM", age=50, gender="Other")
     response = client.post("/sign-in", {"code": "k7qm"})
     assert response.status_code == 302
     assert response.url == "/chat"

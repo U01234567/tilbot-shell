@@ -2,6 +2,19 @@
 
 A framework for research chatbots that get to know a participant, give feedback, and then answer their questions. It wraps Tilbot for the conversation and vector-similarity-intent for understanding free text, and adds what a study needs around them: participant accounts, encrypted storage, rules, a knowledge base and a dashboard. One study at a time, defined entirely in one project folder; the same framework serves patients, voters, students or any other group.
 
+## Quick start
+
+You need Docker, running, and Python 3.11+. Then:
+
+```
+git clone https://github.com/U01234567/tilbot-shell
+cd tilbot-shell
+python start_shell.py up       # first run: creates .env with fresh secrets, builds and starts everything
+python start_shell.py trust    # once per computer: no certificate warnings
+```
+
+Open https://localhost. Back up `FIELD_ENCRYPTION_KEY` from `.env` right away. Then [set up your first chat](docs/operations.md#your-first-chat-start-to-finish). What you should see at each step, and what to do if you don't: [docs/operations.md](docs/operations.md).
+
 ## What every project has
 
 The framework fixes the shape; the project folder fills it in.
@@ -22,19 +35,6 @@ And three phases, always in this order:
 3. **Questions.** The participant asks whatever they want. The shell matches the question to the knowledge base (topic first, then question) and answers, using the participant's own data where the answer calls for it.
 
 Everything a study decides (its language and texts, age range, options, thresholds, feedback templates, knowledge base, theme, the Tilbot flowchart, and its ethics choices) lives in `/project/`, which is never committed. `project-example/` is the empty template and lists what a study has to decide.
-
-## Start
-
-You need Docker and Python 3.11+. The full first-time setup is in [docs/operations.md](docs/operations.md); in short:
-
-```
-cp .env.example .env              # then: python start_shell.py secrets, paste the values
-python start_shell.py lock        # once: pins the Python packages
-python start_shell.py up          # builds and starts everything; creates /project/ from project-example/
-python start_shell.py exec shell pytest
-```
-
-Then open https://localhost.
 
 ## Read next
 

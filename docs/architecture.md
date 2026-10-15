@@ -33,7 +33,7 @@ How the parts fit together, where everything lives, and the contract between the
 | `components.toml` | Tilbot and vector-similarity-intent service: repo, pinned commit, notes | moving to a newer upstream commit |
 | `compose.yaml` | every service as it runs for real | adding a service or a volume |
 | `compose.dev.yaml` | only what differs in development | changing how development runs |
-| `start_shell.py` | `up`, `updates`, `lock`, `secrets`, or any `docker compose` command | adding a routine task |
+| `start_shell.py` | `up` (with `.env`, secrets and checks), `trust`, `updates`, `lock`, or any `docker compose` command | adding a routine task |
 | `proxy/Caddyfile` | HTTPS, security headers, which routes are public | adding a public page or a host |
 | `tilbot/Dockerfile` | builds Tilbot at the pinned commit with our patches | Tilbot changes how it builds |
 | `tilbot/patches/` | our changes to Tilbot, one concern per patch | Tilbot lacks something we need |
@@ -63,7 +63,7 @@ Tilbot calls the shell from its server, inside the Docker network (`http://shell
 | Field | Set by | Meaning |
 |---|---|---|
 | `participant_id` | patch 0001 / 0002 | the signed token from the chat URL (`bridge/tokens.py`), never the participant's code |
-| `bridge_secret` | a Processing-block parameter, or `BRIDGE_SECRET` | must equal `BRIDGE_SECRET` in `.env` |
+| `bridge_secret` | patch 0001 / 0002, from `BRIDGE_SECRET` | must equal `BRIDGE_SECRET` in `.env`; nobody types it |
 
 **`POST /bridge/save`**: one phase-1 answer.
 
@@ -90,14 +90,14 @@ Open the editor from Tilbot's dashboard, with the pencil icon next to the projec
 **Once per project:** under Settings, open External processing and add a link:
 
 - **Name:** `shell-save`
-- **Address:** `http://shell:8000/bridge/save`
+- **Address:** `http://shell:8000/bridge/save`. Tilbot adds the participant and the secret only to addresses that start with `SHELL_URL` (`http://shell:8000/bridge/`, set in `compose.yaml`).
 - **Send the user's input:** on
 - **Send the connectors:** off
 
 **Per question:**
 
 1. **An MC block with the question.** Give it one connector per answer option on the item's scale (for a 0–10 item: `0` to `10`), all pointing to step 2.
-2. **A Processing block "save Q01".** It uses the external link `shell-save`, with parameters `item` = `Q01` and `bridge_secret` = the value from `.env`. Its connectors:
+2. **A Processing block "save Q01".** It uses the external link `shell-save`, with one parameter: `item` = `Q01`. Its connectors:
    - `saved` → the next question
    - `high` → this item's follow-up blocks, which end at the next question
    - *else* → a block "Something went wrong, let's try that again", which leads back to the question

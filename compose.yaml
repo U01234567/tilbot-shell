@@ -71,6 +71,7 @@ services:
       MONGO_DB: mongodb://mongo/tilbot
       SESSION_SECRET: ${TILBOT_SESSION_SECRET}
       COOKIE_SECRET: ${TILBOT_SESSION_SECRET}
+      SHELL_URL: http://shell:8000/bridge/          # patch 0001: only calls here get the participant and the secret
       SHELL_LOG_URL: http://shell:8000/bridge/log   # patch 0002: transcripts go to the shell
       BRIDGE_SECRET: ${BRIDGE_SECRET}
     volumes:

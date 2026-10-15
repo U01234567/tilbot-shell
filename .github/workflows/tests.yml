@@ -1,5 +1,5 @@
 # Runs the shell's tests on every push. Coding style is guided in prompts, not checked here;
-# these checks protect data: the tests, and that every model change has a migration.
+# the tests protect data, including that every model change has a migration (shell/config/tests.py).
 name: tests
 on: [push, pull_request]
 
@@ -37,5 +37,4 @@ jobs:
           python-version: "3.12"
       - run: pip install --require-hashes -r requirements.lock
       - run: pip install -r requirements-dev.txt
-      - run: python manage.py makemigrations --check --dry-run
       - run: pytest

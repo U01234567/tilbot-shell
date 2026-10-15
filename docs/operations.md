@@ -3,29 +3,49 @@
 Setting up, running, deploying a Tilbot project, backups and updates.
 Every command runs from the repository root. `start_shell.py` picks the right compose files and pinned commits; any command it doesn't know goes straight to `docker compose`.
 
-## First-time setup
+## Before you start
 
-You need Docker (Docker Desktop on Windows or macOS) and Python 3.11 or newer.
+- **Docker, running.** Docker Desktop on Windows and macOS, Docker Engine on Linux. Every command except `updates` needs it; `start_shell.py` says so when it isn't running.
+- **Python 3.11 or newer, and Git.**
+- **Free ports.** 80 and 443, and in development 8081 and 5432 on this computer. A web server or a Postgres you installed yourself can hold them; `up` then names the service that didn't start.
 
-1. **Check the pins.** `components.toml` already pins Tilbot and vector-similarity-intent to a commit. `python start_shell.py updates` shows whether upstream has moved on since.
-2. **Make your `.env`.** Copy `.env.example` to `.env`, run `python start_shell.py secrets`, and paste the values into `.env`. Store `FIELD_ENCRYPTION_KEY` somewhere safe as well (see [Keys](#keys)).
-3. **Pin the Python packages.** This writes `shell/requirements.lock`; commit it.
+## Set up on a new computer
+
+1. **Get the code.**
    ```
-   python start_shell.py lock
+   git clone https://github.com/U01234567/tilbot-shell
+   cd tilbot-shell
    ```
-4. **Start everything.** The first build takes a while. `/project/` is created from `project-example/` if it doesn't exist.
+   For a real study, put its `/project/` folder here now; otherwise `up` copies `project-example/`.
+2. **Start everything.** The first build takes several minutes.
    ```
    python start_shell.py up
    ```
-5. **Create the first database migrations.** Commit `shell/accounts/migrations/` and `shell/records/migrations/`.
+   The first run creates `.env` with fresh secrets. You should see **"Everything is running."** If a service is named as not running, its log says why: `python start_shell.py logs <service>`.
+3. **Back up the encryption key.** Copy `FIELD_ENCRYPTION_KEY` from `.env` to two safe places (see [Keys](#keys)).
+4. **Trust the local certificates,** once per computer.
    ```
-   python start_shell.py exec shell python manage.py makemigrations accounts records
-   python start_shell.py exec shell python manage.py migrate
+   python start_shell.py trust
    ```
-6. **Open https://localhost.** Caddy makes its own local certificate, so the browser warns once. To trust it permanently:
+   On Windows it asks you to confirm, then says **"Trusted."** On macOS and Linux it prints one command to run yourself. Restart your browser afterwards. Firefox may need the file imported under Settings, Certificates, Authorities.
+
+   Without this, accept the browser's warning on https://localhost **and** https://bot.localhost. Caddy renews its certificates every 12 hours, so the warning comes back, and until https://bot.localhost is accepted the chat stays blank.
+5. **Run the tests.**
    ```
-   python start_shell.py exec caddy caddy trust
+   python start_shell.py exec shell pytest
    ```
+   You should see every test pass.
+6. **Open https://localhost.** You should see the sign-up page in the study's language. After signing up, the chat page says "No Tilbot project is linked yet" until you have done [your first chat](#your-first-chat-start-to-finish).
+
+## If something is wrong
+
+| You see | Do this |
+|---|---|
+| "Docker is not running" | Start Docker Desktop, wait until it says it is running, try again |
+| "Not running: *service*" after `up` | `python start_shell.py logs <service>`; a port in use is a common cause |
+| A browser error inside the chat frame | Open https://bot.localhost once, or run `python start_shell.py trust` |
+| "No Tilbot project is linked yet" | Follow [your first chat](#your-first-chat-start-to-finish) |
+| "… is empty in .env, but the database was made with the old value" | Put the value back from your backup (see [Keys](#keys)) |
 
 ## Every day
 
@@ -38,8 +58,10 @@ You need Docker (Docker Desktop on Windows or macOS) and Python 3.11 or newer.
 | After a CSS change | `python start_shell.py exec shell python manage.py collectstatic --noinput` |
 | After a change in `/project/` | `python start_shell.py restart shell` |
 | After a model change | `python start_shell.py exec shell python manage.py makemigrations`, then commit the new migration |
+| After changing `shell/requirements.in` | `python start_shell.py lock`, then `up`, then commit `shell/requirements.lock` |
+| After `down -v` | `python start_shell.py trust` again: Caddy made a new certificate |
 
-## Putting the Tilbot project online
+## Your first chat, start to finish
 
 The flowchart is made in Tilbot's editor, in the browser, and stored on the Tilbot server.
 
@@ -65,18 +87,23 @@ Good to know:
 - **Keep two copies outside this computer,** for example in two password managers held by two people.
 - **Never change the key** once real data is stored. Changing it needs a re-encryption step that doesn't exist yet.
 - **Restoring a database backup also needs the key** that was in use when the backup was made.
+- **New secrets:** empty their values in `.env` and run `up`, which fills them in again. It refuses to replace `FIELD_ENCRYPTION_KEY` or `POSTGRES_PASSWORD` while a database exists, because the new value would lock out what is stored.
 
 ## Backups
 
+The dump is written inside the database container and then copied out, so no terminal can change its bytes on the way. Keep backups outside the repository folder; `.gitignore` skips `*.dump` files as a safety net.
+
 **Make one:**
 ```
-python start_shell.py exec db pg_dump -U shell -Fc shell > backup-2026-10-12.dump
+python start_shell.py exec db pg_dump -U shell -Fc -f /tmp/backup.dump shell
+python start_shell.py cp db:/tmp/backup.dump backup-2026-10-15.dump
 ```
 
-**Test it.** A backup only counts once a restore has worked:
+**Test it.** A backup only counts once a restore has worked. This copies the saved file back in and restores it into a scratch database:
 ```
-python start_shell.py exec -T db createdb -U shell restore_test
-python start_shell.py exec -T db pg_restore -U shell -d restore_test < backup-2026-10-12.dump
+python start_shell.py cp backup-2026-10-15.dump db:/tmp/restore.dump
+python start_shell.py exec db createdb -U shell restore_test
+python start_shell.py exec db pg_restore -U shell -d restore_test /tmp/restore.dump
 python start_shell.py exec db dropdb -U shell restore_test
 ```
 

@@ -9,6 +9,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
 from accounts.session import signed_in_id
+from config.project import NO_TILBOT_PROJECT
 from bridge.tokens import make_token, read_token
 from records.models import Answer, TranscriptLine
 from phase1_collect.rules import parse_answer, route_after
@@ -18,6 +19,8 @@ def chat(request):
     participant_id = signed_in_id(request)
     if participant_id is None:
         return redirect("home")
+    if settings.STUDY.tilbot_project_id == NO_TILBOT_PROJECT:
+        return render(request, "bridge/chat.html", {"bot_url": None})
     query = urlencode({
         "project": settings.STUDY.tilbot_project_id,
         "pid": make_token(participant_id),

@@ -1,6 +1,11 @@
 # The real study content and all secrets stay off GitHub.
 /project/
 .env
+*.zip
+*.dump
+
+# Made by `python start_shell.py trust`; belongs to this computer only.
+/caddy-root.crt
 
 # Python
 __pycache__/

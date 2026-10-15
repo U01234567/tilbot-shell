@@ -21,6 +21,9 @@ class Item:
     threshold: int | None  # an answer at or above this leads to follow-ups; None: never
 
 
+# project-example's placeholder for [tilbot] project_id: no Tilbot project is linked yet.
+NO_TILBOT_PROJECT = "0" * 32
+
 # Every text a participant sees. project.toml must define each one under [texts].
 TEXT_KEYS = (
     "sign_up", "sign_in", "sign_out", "your_id", "write_it_down", "age", "gender",
