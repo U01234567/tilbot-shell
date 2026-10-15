@@ -4,10 +4,10 @@ The chat page gives Tilbot a signed token, never the participant's code, so nobo
 someone else's code into the URL. Signed with Django's own signing, no home-made cryptography.
 """
 
+from django.conf import settings
 from django.core import signing
 
 SALT = "bridge.participant"
-MAX_AGE = 60 * 60 * 12  # seconds; a longer chat needs a fresh sign-in (SESSION_COOKIE_AGE)
 
 
 def make_token(participant_id: int) -> str:
@@ -16,4 +16,4 @@ def make_token(participant_id: int) -> str:
 
 def read_token(token: str) -> int:
     """Return the participant id; raise signing.BadSignature for a forged or expired token."""
-    return signing.loads(token, salt=SALT, max_age=MAX_AGE)
+    return signing.loads(token, salt=SALT, max_age=settings.SESSION_COOKIE_AGE)

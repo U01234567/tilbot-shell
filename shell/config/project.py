@@ -1,4 +1,4 @@
-"""The study settings in /project/, read once at start-up.
+"""The study settings in project/, read once at start-up.
 
 project.toml holds what the research team checks and edits: sign-up limits and options, every text
 the participant sees (so each study picks its own language), and the Tilbot project.
@@ -7,6 +7,7 @@ A mistake in either file stops the shell with an error that names the problem.
 """
 
 import tomllib
+import zoneinfo
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -34,7 +35,9 @@ TEXT_KEYS = (
 @dataclass(frozen=True)
 class Study:
     name: str
-    language: str  # BCP 47 tag for the pages, for example "nl" or "en"
+    language: str  # the language code of the pages, for example "nl" or "en"
+    time_zone: str  # times are shown in this zone, for example "Europe/Amsterdam"
+    transcripts: bool  # store the chat messages (encrypted), or only the answers
     tilbot_project_id: str
     age_min: int
     age_max: int
@@ -57,6 +60,8 @@ def load_study(project_dir: Path) -> Study:
     return Study(
         name=settings["name"],
         language=settings["language"],
+        time_zone=str(zoneinfo.ZoneInfo(settings["time_zone"])),  # an unknown zone fails here, at start-up
+        transcripts=settings["transcripts"]["enabled"],
         tilbot_project_id=settings["tilbot"]["project_id"],
         age_min=signup["age_min"],
         age_max=signup["age_max"],

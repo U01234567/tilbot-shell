@@ -16,8 +16,8 @@ Every command runs from the repository root. `start_shell.py` picks the right co
    git clone https://github.com/U01234567/tilbot-shell
    cd tilbot-shell
    ```
-   For a real study, put its `/project/` folder here now; otherwise `up` copies `project-example/`.
-2. **Start everything.** The first build takes several minutes.
+   For a real study, put its `project/` folder here now; otherwise `up` copies `project-example/`.
+2. **Start everything.** The first build takes several minutes and downloads about two gigabytes; the terminal shows every build step.
    ```
    python start_shell.py up
    ```
@@ -37,7 +37,7 @@ Every command runs from the repository root. `start_shell.py` picks the right co
    python start_shell.py exec shell pytest
    ```
    You should see every test pass.
-6. **Open https://localhost.** You should see the sign-up page in the study's language. After signing up, the chat page says "No Tilbot project is linked yet" until you have done [your first chat](#your-first-chat-start-to-finish).
+6. **Open https://localhost.** You should see the study's name and two buttons, sign up and sign in, in the study's language. After signing up, the chat page says "No Tilbot project is linked yet" until you have done [your first chat](#your-first-chat-start-to-finish).
 
 ## If something is wrong
 
@@ -52,16 +52,21 @@ Every command runs from the repository root. `start_shell.py` picks the right co
 | The dashboard refuses the admin password | It is `TILBOT_ADMIN_PASSWORD` in `.env`, unless someone changed it under "Your account". An admin made before that setting existed still has `admin`: log in with that and change it at once |
 | The admin password is lost | Delete only the admin account; projects belong to researcher accounts and stay. `python start_shell.py exec mongo mongosh tilbot --eval "db.users.deleteOne({role: 99})"`. The next visit to the login page makes `admin` again, with the password from `.env` |
 
-## Every day
+## Running a study
 
 | Task | Command |
 |---|---|
 | Start | `python start_shell.py up` |
 | Stop | `python start_shell.py down` |
-| Follow the shell's log | `python start_shell.py logs -f shell` |
+| After a change in `project/` | `python start_shell.py restart shell` |
+| See what the shell is doing | `python start_shell.py logs -f shell` |
+
+## Developing
+
+| Task | Command |
+|---|---|
 | Run the tests | `python start_shell.py exec shell pytest` |
 | After a CSS change | `python start_shell.py exec shell python manage.py collectstatic --noinput` |
-| After a change in `/project/` | `python start_shell.py restart shell` |
 | After a model change | `python start_shell.py exec shell python manage.py makemigrations`, then commit the new migration |
 | After changing `shell/requirements.in` | `python start_shell.py lock`, then `up`, then commit `shell/requirements.lock` |
 
@@ -69,20 +74,28 @@ Every command runs from the repository root. `start_shell.py` picks the right co
 
 The flowchart is made in Tilbot's editor, in the browser, and stored on the Tilbot server.
 
-1. **Log in to the dashboard** at http://127.0.0.1:8081/login as `admin`, with the password from `TILBOT_ADMIN_PASSWORD` in `.env`. Tilbot creates that account on the first visit; there is no `admin`/`admin`. To change the password later: "Your account" in the dashboard. `.env` only holds the first one.
+1. **Log in to the dashboard** at http://127.0.0.1:8081/login as `admin`, with the password from `TILBOT_ADMIN_PASSWORD` in `.env`. Tilbot creates that account on the first visit (you should see "No admin account was found, so I created it"); there is no `admin`/`admin`. To change the password later: "Your account" in the dashboard. `.env` only holds the first one.
 2. **Create a researcher account.** As `admin`, create a user, then log in as that user. Only users can own projects; the admin account can't.
 3. **Create a project** with "+ New project".
 4. **Draw the flowchart.** The pencil icon opens the editor. Save with the save icon in the editor's menu; "Project saved!" confirms it. How to build the questionnaire is in [architecture.md](architecture.md#phase-1-in-tilbots-editor).
 5. **Switch it to running** in the dashboard.
-6. **Connect it to the shell.** The globe icon opens `/?project=<id>`. Copy that id into `[tilbot] project_id` in `/project/project.toml`, then restart the shell.
-7. **Test it.** Sign up at https://localhost and check that the chat appears.
-8. **Back it up.** The up-arrow icon downloads the project as one `.tilbot` file; keep it in `/project/tilbot/`. Tilbot keeps its projects in a Docker volume, which `down -v` deletes. To move a project to another computer or a server, import that file there.
+6. **Connect it to the shell.** The globe icon opens `/?project=<id>`. Copy that id into `[tilbot] project_id` in `project/project.toml`, then restart the shell.
+7. **Test it.** Sign up at https://localhost. You should see the bot's first message inside the page. Answer a question, then check that the answer was stored:
+   ```
+   python start_shell.py exec db psql -U shell shell -c "select participant_id, item, at from records_answer"
+   ```
+   You should see one row per answer. The values themselves are encrypted and don't show here; exporting them for analysis is not built yet (known gap).
+8. **Back it up.** The up-arrow icon downloads the project as one `.tilbot` file; keep it in `project/tilbot/`. Tilbot keeps its projects in a Docker volume, which `down -v` deletes. To move a project to another computer or a server, import that file there.
 
 Good to know:
 
 - **Saving changes the running chat** for every new conversation. Data tables and avatars are stored the moment you add them. While a study runs, work on a copy: a new project with the exported file imported into it.
 - **The editor has no "Load project" button in the browser.** Use Import in the dashboard.
-- **Leave "Logging enabled" off**, in the dashboard and in the editor's settings: transcripts already go to the shell, encrypted.
+- **Transcripts** are stored by the shell, encrypted, when `project/project.toml` has `transcripts.enabled = true` (the default). Tilbot's own logging is off and its switch hidden; nothing is ever written in plain text.
+
+## On a server
+
+Not described yet. `compose.yaml` is written for it (`SHELL_ENV=production`, a real `SHELL_HOST` and `BOT_HOST`, ports 80 and 443 open so Caddy can get certificates), but it has not been done once, and Tilbot's dashboard is not reachable there (known gap). The first deployment will write this section.
 
 ## Keys
 

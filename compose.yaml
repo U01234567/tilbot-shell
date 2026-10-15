@@ -47,11 +47,16 @@ services:
     volumes:
       - ./project:/project:ro
       - static:/app/staticfiles
-    depends_on: [db]
+    depends_on:
+      db: { condition: service_healthy }
 
   db:
     image: postgres:17
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}"]
+      interval: 5s
+      retries: 10
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
@@ -74,8 +79,7 @@ services:
       SESSION_SECRET: ${TILBOT_SESSION_SECRET}
       COOKIE_SECRET: ${TILBOT_SESSION_SECRET}
       ADMIN_PASSWORD: ${TILBOT_ADMIN_PASSWORD}       # patch 0006: no admin/admin default
-      SHELL_URL: http://shell:8000/bridge/          # patch 0001: only calls here get the participant and the secret
-      SHELL_LOG_URL: http://shell:8000/bridge/log   # patch 0002: transcripts go to the shell
+      SHELL_URL: http://shell:8000/bridge/   # keep the trailing slash: patches 0001 and 0002 add "save" and "log" to it
       BRIDGE_SECRET: ${BRIDGE_SECRET}
     volumes:
       - tilbot-projects:/tilbot/backend/projects

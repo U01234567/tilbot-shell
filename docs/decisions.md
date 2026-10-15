@@ -2,7 +2,7 @@
 
 The big choices behind this framework: what we chose, why, and what we turned down.
 Smaller choices are explained where they are made, in a comment or in [architecture.md](architecture.md).
-A study's own choices (texts, age range, thresholds, retention) live in its `/project/README.md`.
+A study's own choices (texts, age range, thresholds, retention) live in its `project/README.md`.
 
 When a big choice changes, rewrite its section here and say what changed and when.
 
@@ -99,7 +99,7 @@ The rule behind this is that no answer may ever be lost silently. An update that
 
 ## One project folder per study
 
-Everything specific to a study lives in `/project/`, which is never committed. This covers settings in TOML, the Tilbot flowchart, the knowledge base, feedback templates, theme and texts. `project-example/` shows its shape. The code contains nothing study-specific, so the same framework runs any study of this shape. One deployment runs one study.
+Everything specific to a study lives in `project/`, which is never committed. This covers settings in TOML, the Tilbot flowchart, the knowledge base, feedback templates, theme and texts. `project-example/` shows its shape. The code contains nothing study-specific, so the same framework runs any study of this shape. One deployment runs one study.
 
 - **Study settings in the code.** Every study would need its own copy of the code.
 - **Study settings in the database, edited through a web page.** That needs an editor to be built, and the settings could no longer be read, copied or backed up as files.
@@ -147,12 +147,26 @@ Questions in phase 3 are matched to the knowledge base by meaning, in two steps:
 
 We use it unchanged and fork it only if matching falls short on a real knowledge base.
 
+## Transcripts: a study setting, never plain text
+
+Whether chat messages are stored is `transcripts.enabled` in `project.toml`, on by default. The shell decides; Tilbot's own logging stays off and its switch is hidden (patch 0002), so a transcript can only ever exist encrypted in the shell's database.
+
+- **Tilbot's own "Logging enabled" switch.** It writes plain text to MongoDB, and a researcher could flip it by accident.
+- **Always on, no setting.** Simplest, but a study that must not keep transcripts would have to change code.
+
+## No default admin password
+
+Tilbot's dashboard account `admin` gets its first password from `.env` (patch 0006), filled in by `up` like the other secrets. Without that setting Tilbot refuses to create the account.
+
+- **Keep Tilbot's `admin`/`admin` and tell people to change it.** Documented advice is forgotten; a known default on a research server is a security hole.
+- **Fall back to `admin` when the setting is missing.** Easier to merge upstream, but a silent default is exactly what we wanted gone.
+
 ## Known gaps in version 0.7
 
-- **Not built yet:** phase 2, phase 3 (and so the knowledge base), the monitor dashboard, our own chat route, backups and the update flow in `start_shell.py`.
+- **Not built yet:** phase 2, phase 3 (and so the knowledge base), the staff dashboard with data export, a chat page in the study's own look, backups and the update flow in `start_shell.py`, and running on a server.
 - **vector-similarity-intent is started with `--profile phase3`** until phase 3 exists, so developers don't download its model for nothing.
 - **Transcripts are best-effort.** If the shell is down, Tilbot logs an error and that line is lost. Answers are not lost: they are asked again.
-- **IP addresses in `Attempt` are not cleaned up yet.** They need a retention period (see `ETHICS.md`).
+- **The `transcripts.enabled` setting is read by the shell only.** Tilbot still sends every event; the shell discards them. That costs nothing but is worth knowing.
 - **Only number answers** are supported in phase 1.
 - **No healthchecks** in the compose files yet.
 - **The patches were made against the code of 12 October 2026.** If they don't apply to a newer pinned commit, regenerate them.

@@ -48,13 +48,26 @@ How the parts fit together, where everything lives, and the contract between the
 | `shell/phase2_feedback/` | feedback (placeholder) | building phase 2 |
 | `shell/phase3_questions/` | questions answered from the knowledge base (placeholder) | building phase 3 |
 | `shell/monitor/` | staff dashboard (placeholder) | building the overview |
-| `project-example/` | the shape of `/project/`, with dummy content | the project format changes |
-| `/project/` | the real study, not committed | the research team changes a setting |
+| `project-example/` | the shape of `project/`, with dummy content | the project format changes |
+| `project/` | the real study, not committed | the research team changes a setting |
 | `docs/` | this file, `decisions.md`, `operations.md` | something here is no longer true |
 
 Every fixed component has its own root folder: `shell/` is ours, `tilbot/` and `vector-similarity-intent/` each hold a build file and a `patches/` folder. The build applies whatever patches exist, so a folder stays in use when upstream merges our patches and the patch files are deleted.
 
 A folder becomes a Django app (listed in `INSTALLED_APPS`) only when it has models, pages or URLs. `phase1_collect` holds plain Python rules, so it isn't one.
+
+## Our patches to Tilbot
+
+Each patch is one concern, applied to the pinned commit at build time (`tilbot/patches/`), and offered upstream.
+
+| Patch | Changes | Why it matters for a review |
+|---|---|---|
+| `0001-forward-participant` | Tilbot adds the participant token and the bridge secret to calls to the shell, and only to those | the shell knows who answered; the secret is never typed into a flowchart |
+| `0002-shell-logger` | conversation events go to the shell instead of MongoDB; the dashboard's logging switch is hidden | no transcript is ever stored in plain text |
+| `0003-embed-cross-origin` | the chat works when embedded by another site | a bug fix; nothing about data |
+| `0004-safe-variable-sql` | Tilbot's data tables are read with parameters instead of pasted text | closes an SQL injection a participant could use through the chat |
+| `0005-browser-editor` | the flowchart editor works in the browser, against the server, for your own projects only | researchers need no desktop app; every editor route checks the login |
+| `0006-admin-password` | the first admin password comes from `.env`; Tilbot refuses to create the account without one | no `admin`/`admin` default |
 
 ## The bridge contract
 
@@ -82,6 +95,8 @@ The shell replies with `{"intent": "saved"}` or `{"intent": "high"}`, but only a
 | `seq` | order within that conversation |
 | `event` | `message_bot`, `message_user`, `session_end`, … |
 | `detail` | the message text, stored encrypted |
+
+The shell stores these lines only when `project.toml` has `transcripts.enabled = true`; otherwise it answers 204 and keeps nothing.
 
 ## Phase 1 in Tilbot's editor
 
@@ -123,3 +138,19 @@ The save calls only work in a chat opened from the shell's chat page, because on
   - `@public` lists the only paths participants need; everything else answers 404.
   - Inside `route`, the API, websocket and project files go to the backend, and pages go to the frontend.
 - **`:8081 { … }`** is Tilbot complete with its dashboard, on plain HTTP. It is reachable only where a compose file publishes port 8081, which is `127.0.0.1` in development.
+
+## Words used in these docs
+
+- **Shell:** our Django application, everything around Tilbot.
+- **Participant:** a person who signs up and talks to the bot. **Researcher:** who runs the study. **Staff:** anyone with access to the server.
+- **Project folder (`project/`):** the one folder with everything a study decides. Inside the containers it is `/project`.
+- **Flowchart:** the conversation as drawn in Tilbot's editor. **Block:** one step in it (a question, a text, a processing step). **Connector:** an arrow leaving a block, with a label that decides where the chat goes next.
+- **Processing block / external link:** a block that sends the participant's answer to another server (here: the shell) and follows the connector that server names.
+- **Reverse proxy (Caddy):** the one program that faces the internet; it handles HTTPS and passes requests to the shell or Tilbot.
+- **HTTPS, certificate:** the encryption of traffic between the browser and the server, and the file that proves the server's name. Locally, Caddy issues its own.
+- **Container, image, volume (Docker):** a program packed with everything it needs; the file it is built from; a folder Docker keeps between restarts (the databases live in volumes).
+- **Migration:** a file that tells Django how to change the database tables when the models change.
+- **Encrypted at rest (Fernet):** the value in the database is unreadable without the key in `.env`.
+- **Token:** a signed string that names the participant without revealing the code; forging one needs the server's secret key.
+- **CSRF, CSP, HSTS:** browser-side protections against forged forms, injected scripts, and plain-HTTP downgrades.
+- **Pinned commit:** the exact version of Tilbot we build, by its git hash, so a build is repeatable.

@@ -1,5 +1,5 @@
 diff --git a/backend/server.ts b/backend/server.ts
-index b5b8a8a..a112e38 100644
+index 655b3c7..d0a5d29 100644
 --- a/backend/server.ts
 +++ b/backend/server.ts
 @@ -34,6 +34,8 @@ import {
@@ -11,7 +11,16 @@ index b5b8a8a..a112e38 100644
  
  import { VariableDb } from "../common/variabledb.ts";
  import { NonLogger } from "../common/projectcontroller/nonlogger.ts";
-@@ -527,7 +529,7 @@ app.get("/api/create_conversation", async (req, res) => {
+@@ -257,6 +259,8 @@ app.get("/api/get_dashboard", async (req, res) => {
+       active: true,
+     });
+     data.settings = await user.getPermittedSettings();
++    // With an embedding site storing conversations, MongoDB logging is off and its switch is hidden.
++    data.logging_elsewhere = Boolean(process.env.SHELL_URL);
+   }
+   return JSON.stringify(data);
+ });
+@@ -527,7 +531,7 @@ app.get("/api/create_conversation", async (req, res) => {
    const projectController = new LocalProjectController(
      new ServerControllerLookup(db, false, participantId),
      new ServerControllerOutput(),
@@ -20,18 +29,18 @@ index b5b8a8a..a112e38 100644
      project
    );
  
-@@ -605,6 +607,18 @@ app.get("/ws/chat", { websocket: true }, async (socket, req) => {
+@@ -605,6 +609,18 @@ app.get("/ws/chat", { websocket: true }, async (socket, req) => {
    });
  });
  
-+// Conversation events go to SHELL_LOG_URL when it is set, otherwise to MongoDB if the project logs.
++// Conversation events go to the embedding site when SHELL_URL is set, otherwise to MongoDB if the project logs.
 +function chooseLogger(
 +  project: any,
 +  projectId: string,
 +  participantId: string
 +): ProjectControllerLoggerInterface {
-+  if (process.env.SHELL_LOG_URL) {
-+    return new ShellLogger(process.env.SHELL_LOG_URL, process.env.BRIDGE_SECRET ?? "", participantId);
++  if (process.env.SHELL_URL) {
++    return new ShellLogger(process.env.SHELL_URL + "log", process.env.BRIDGE_SECRET ?? "", participantId);
 +  }
 +  return project.settings.logging_enabled ? new Logger(projectId) : new NonLogger();
 +}
@@ -41,7 +50,7 @@ index b5b8a8a..a112e38 100644
  
 diff --git a/backend/shelllogger.ts b/backend/shelllogger.ts
 new file mode 100644
-index 0000000..bab85a3
+index 0000000..dc04edd
 --- /dev/null
 +++ b/backend/shelllogger.ts
 @@ -0,0 +1,50 @@
@@ -50,7 +59,7 @@ index 0000000..bab85a3
 +
 +/**
 + * Sends every conversation event to an external server (for example a site that embeds Tilbot)
-+ * instead of storing it in MongoDB. Used when SHELL_LOG_URL is set.
++ * instead of storing it in MongoDB. Used when SHELL_URL is set; events go to SHELL_URL + "log".
 + *
 + * Events are posted as form fields: participant_id, conversation, seq (order within the
 + * conversation), event, detail and bridge_secret (from BRIDGE_SECRET).
@@ -95,3 +104,69 @@ index 0000000..bab85a3
 +    throw new Error("ShellLogger does not store audio");
 +  }
 +}
+diff --git a/frontend/src/routes/dashboard/+page.svelte b/frontend/src/routes/dashboard/+page.svelte
+index e20b2e0..b17de76 100644
+--- a/frontend/src/routes/dashboard/+page.svelte
++++ b/frontend/src/routes/dashboard/+page.svelte
+@@ -538,9 +538,11 @@
+                   <th class="text-center">View</th>
+                   <th class="text-center">Running</th>
+                   <th class="text-center">Import</th>
+-                  <th class="text-center">Logging enabled?</th>
+-                  <th class="text-center">Download logs</th>
+-                  <th class="text-center">Delete logs</th>
++                  {#if !data.logging_elsewhere}
++                    <th class="text-center">Logging enabled?</th>
++                    <th class="text-center">Download logs</th>
++                    <th class="text-center">Delete logs</th>
++                  {/if}
+                   <!--<th>Edit</th>-->
+                   <th class="text-center">Delete</th>
+                 </tr>
+@@ -583,25 +585,27 @@
+                         class="w-6 h-6 inline-block cursor-pointer"
+                       />
+                     </td>
+-                    <td class="text-center">
+-                      <input type="checkbox" class="toggle" bind:checked={p.logging_enabled} onclick={saveLogging(p.id)} />
+-                    </td>
+-                    <td class="text-center">
+-                      <DocumentArrowDown
+-                        onclick={() => {
+-                          getLogs(p.id);
+-                        }}
+-                        class="w-6 h-6 inline-block cursor-pointer"
+-                      />
+-                    </td>
+-                    <td class="text-center">
+-                      <Trash
+-                        onclick={deleteLogs}
+-                        data-id={p.id}
+-                        data-name={p.name}
+-                        class="w-6 h-6 inline-block cursor-pointer"
+-                      />
+-                    </td>
++                    {#if !data.logging_elsewhere}
++                      <td class="text-center">
++                        <input type="checkbox" class="toggle" bind:checked={p.logging_enabled} onclick={saveLogging(p.id)} />
++                      </td>
++                      <td class="text-center">
++                        <DocumentArrowDown
++                          onclick={() => {
++                            getLogs(p.id);
++                          }}
++                          class="w-6 h-6 inline-block cursor-pointer"
++                        />
++                      </td>
++                      <td class="text-center">
++                        <Trash
++                          onclick={deleteLogs}
++                          data-id={p.id}
++                          data-name={p.name}
++                          class="w-6 h-6 inline-block cursor-pointer"
++                        />
++                      </td>
++                    {/if}
+                     <!-- <td>
+                             <a href="/editor?project={p.id}">
+                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">

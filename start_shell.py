@@ -1,6 +1,6 @@
 """Start and look after tilbot-shell. Needs Python 3.11+ and Docker; standard library only.
 
-    python start_shell.py up         create .env and /project/ if needed, then build and start everything
+    python start_shell.py up         create .env and project/ if needed, then build and start everything
     python start_shell.py trust      make this computer trust https://localhost and https://bot.localhost
     python start_shell.py updates    compare the pinned commits in components.toml with upstream
     python start_shell.py lock       regenerate shell/requirements.lock (exact versions with hashes)
@@ -39,14 +39,24 @@ TRUST_COMMANDS = {
 }
 
 
+def env_values(env_text: str) -> dict[str, str]:
+    """Return NAME: value for every NAME=value line, without comments; a bare NAME= gives ""."""
+    values = {}
+    for line in env_text.splitlines():
+        name, is_assignment, value = line.partition("=")
+        if is_assignment and not name.startswith("#"):
+            values[name] = value.split("#")[0].strip()
+    return values
+
+
 def shell_env() -> str:
     """Return SHELL_ENV from .env: "development" or "production"."""
     if not (ROOT / ".env").exists():
         raise ValueError("there is no .env yet: run python start_shell.py up")
-    for line in (ROOT / ".env").read_text(encoding="utf-8").splitlines():
-        if line.startswith("SHELL_ENV="):
-            return line.removeprefix("SHELL_ENV=").split("#")[0].strip()
-    raise ValueError("SHELL_ENV is missing from .env (see .env.example)")
+    values = env_values((ROOT / ".env").read_text(encoding="utf-8"))
+    if "SHELL_ENV" not in values:
+        raise ValueError("SHELL_ENV is missing from .env (see .env.example)")
+    return values["SHELL_ENV"]
 
 
 def compose_files(env: str) -> list[str]:
@@ -61,11 +71,12 @@ def pinned_env(components: dict) -> dict[str, str]:
     unpinned = [name for name in PINNED if len(components[name]["commit"]) != 40]
     if unpinned:
         raise ValueError(f"components.toml: give {', '.join(unpinned)} a full 40-character commit hash")
-    return {
-        f"{name.upper().replace('-', '_')}_{key.upper()}": components[name][key]
-        for name in PINNED
-        for key in ("repo", "commit")
-    }
+    env = {}
+    for name in PINNED:
+        prefix = name.upper().replace("-", "_")  # vector-similarity-intent -> VECTOR_SIMILARITY_INTENT
+        env[f"{prefix}_REPO"] = components[name]["repo"]
+        env[f"{prefix}_COMMIT"] = components[name]["commit"]
+    return env
 
 
 def read_components() -> dict:
@@ -81,17 +92,12 @@ def fresh_secret(name: str) -> str:
 
 def with_secrets(env_text: str) -> tuple[str, list[str]]:
     """Return the .env text with every empty or missing secret filled in, and the names of those secrets."""
-    lines, filled = [], []
-    for line in env_text.splitlines():
-        name, _, value = line.partition("=")
-        if name in SECRETS and not value.split("#")[0].strip():
-            line = f"{name}={fresh_secret(name)}"
-            filled.append(name)
-        lines.append(line)
-    present = {line.partition("=")[0] for line in lines}
-    missing = [name for name in SECRETS if name not in present]  # a .env from before a secret existed
-    lines += [f"{name}={fresh_secret(name)}" for name in missing]
-    return "\n".join(lines) + "\n", filled + missing
+    values = env_values(env_text)
+    filled = [name for name in SECRETS if not values.get(name)]
+    new_lines = {name: f"{name}={fresh_secret(name)}" for name in filled}
+    lines = [new_lines.get(line.partition("=")[0], line) for line in env_text.splitlines()]
+    lines += [new_lines[name] for name in filled if name not in values]  # a .env from before the secret existed
+    return "\n".join(lines) + "\n", filled
 
 
 def require_docker() -> None:
@@ -132,7 +138,7 @@ def compose(*args: str, capture: bool = False) -> str:
 
 
 def up() -> None:
-    require_docker()
+    require_docker()  # before ensure_env, which asks Docker about the database
     ensure_env()
     if not (ROOT / "shell" / "requirements.lock").exists():
         raise ValueError("shell/requirements.lock is missing: run python start_shell.py lock first")
@@ -205,7 +211,9 @@ def main() -> None:
             compose(*args)
     except subprocess.CalledProcessError as error:
         sys.exit(error.returncode)
-    except (FileNotFoundError, KeyError, ValueError) as error:
+    except KeyError as error:
+        sys.exit(f"start_shell.py: components.toml lacks {error}")
+    except (FileNotFoundError, ValueError) as error:
         sys.exit(f"start_shell.py: {error}")
 
 

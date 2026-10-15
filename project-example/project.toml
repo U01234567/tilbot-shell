@@ -2,7 +2,8 @@
 # The shell reads this file when it starts: restart the shell after a change.
 
 name = "Example study"   # shown to participants, in their language
-language = "en"          # language of the pages (BCP 47 tag): "en", "nl", ...
+language = "en"            # language of the pages, one Django knows: "en", "nl", "de", ...
+time_zone = "UTC"          # times are shown in this zone, for example "Europe/Amsterdam"
 
 [signup]
 age_min = 1                 # to confirm with the research team
@@ -25,6 +26,11 @@ id_taken = "Someone else just got the same ID. Your new ID is below."
 blocked_title = "Please wait"
 blocked_text = "Too many attempts from this connection. Try again in fifteen minutes."
 back = "Back"
+
+[transcripts]
+# Chat messages are stored, encrypted, next to the answers. false: only the answers are stored.
+# Tilbot's own "Logging enabled" switch stays off either way: nothing is ever written in plain text.
+enabled = true
 
 [tilbot]
 # The id of the project in Tilbot's dashboard (http://127.0.0.1:8081/dashboard),

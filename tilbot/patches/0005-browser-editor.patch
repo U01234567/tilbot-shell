@@ -37,7 +37,7 @@ index 394c08f..2d9f92a 100644
         * Retrieve this project's logs
         *
 diff --git a/backend/server.ts b/backend/server.ts
-index a112e38..eda374f 100644
+index d0a5d29..e01ad52 100644
 --- a/backend/server.ts
 +++ b/backend/server.ts
 @@ -1,7 +1,7 @@
@@ -50,7 +50,7 @@ index a112e38..eda374f 100644
  import { fastifySession } from "@fastify/session";
  import { fastifyCookie } from "@fastify/cookie";
  import fastifyCORS from "@fastify/cors";
-@@ -404,6 +404,135 @@ app.post("/api/import_project", async (req, res) => {
+@@ -406,6 +406,137 @@ app.post("/api/import_project", async (req, res) => {
    await project.save();
  });
  
@@ -61,24 +61,26 @@ index a112e38..eda374f 100644
 +const EDITOR_BODY_LIMIT = 20 * 1024 * 1024; // bytes; a data table imported from Excel can be large
 +const AVATAR_FILE = /\.(png|jpe?g|svg)$/i; // the same types the desktop app accepts
 +
-+// The project must belong to the user; its id is checked before it names a folder on disk.
-+async function ownProject(req: FastifyRequest, projectId: unknown) {
++// A logged-in user, and for a change (POST) the editor's own header: another site can't add that
++// header without a CORS preflight, which this server refuses, so a forged form never passes.
++function requireEditorUser(req: FastifyRequest): string {
 +  const session: any = req.session;
 +  if (session.username == undefined) {
 +    throw new TilBotNotLoggedInError();
 +  }
-+  // Another site can't add this header without a CORS preflight, which this server refuses,
-+  // so a POST that carries it was sent by the editor itself, not by a forged form.
 +  if (req.method === "POST" && req.headers["x-tilbot-editor"] !== "1") {
 +    throw new TilBotError();
 +  }
++  return session.username;
++}
++
++// The project must belong to the user; its id is checked before it names a folder on disk.
++async function ownProject(req: FastifyRequest, projectId: unknown) {
++  const username = requireEditorUser(req);
 +  if (typeof projectId !== "string" || !/^[0-9a-f]{32}$/.test(projectId)) {
 +    throw new TilBotProjectNotFoundError(String(projectId));
 +  }
-+  return await ProjectModel.getById(projectId, {
-+    user_id: session.username,
-+    active: true,
-+  });
++  return await ProjectModel.getById(projectId, { user_id: username, active: true });
 +}
 +
 +// The project's data tables. A running chat opens the same file, so it is created if missing.
@@ -169,7 +171,7 @@ index a112e38..eda374f 100644
 +
 +  const zip = new AdmZip();
 +  zip.addFile("project.json", Buffer.from(JSON.stringify(project.toModel())));
-+  openVariables(project.id).close();
++  openVariables(project.id).close(); // so variables.db exists even if no data table was ever saved
 +  zip.addLocalFile(`${__dirname}/projects/${project.id}/variables.db`);
 +  for (const avatar of [project.settings.avatar_file, project.settings.avatar_file_sm]) {
 +    if (avatar) {
@@ -186,7 +188,7 @@ index a112e38..eda374f 100644
  /**
   * API call: save a user's settings
   */
-@@ -523,6 +652,7 @@ app.get("/api/create_conversation", async (req, res) => {
+@@ -525,6 +656,7 @@ app.get("/api/create_conversation", async (req, res) => {
    const settings = await SettingsModel.findOne({ user_id: project.user_id });
  
    const p = `${__dirname}/projects/${project.id}`;
@@ -329,7 +331,7 @@ index d91ea8f..79c9d88 100644
        chatLookup = new ChatLookup();
        const nonLogger = new NonLogger();
 diff --git a/frontend/src/routes/dashboard/+page.svelte b/frontend/src/routes/dashboard/+page.svelte
-index e20b2e0..9229334 100644
+index b17de76..7c450b1 100644
 --- a/frontend/src/routes/dashboard/+page.svelte
 +++ b/frontend/src/routes/dashboard/+page.svelte
 @@ -3,10 +3,12 @@
@@ -345,20 +347,22 @@ index e20b2e0..9229334 100644
      User,
      Users,
      RocketLaunch,
-@@ -538,10 +540,11 @@
+@@ -538,12 +540,13 @@
                    <th class="text-center">View</th>
                    <th class="text-center">Running</th>
                    <th class="text-center">Import</th>
 +                  <th class="text-center">Export</th>
-                   <th class="text-center">Logging enabled?</th>
-                   <th class="text-center">Download logs</th>
-                   <th class="text-center">Delete logs</th>
+                   {#if !data.logging_elsewhere}
+                     <th class="text-center">Logging enabled?</th>
+                     <th class="text-center">Download logs</th>
+                     <th class="text-center">Delete logs</th>
+                   {/if}
 -                  <!--<th>Edit</th>-->
 +                  <th class="text-center">Edit</th>
                    <th class="text-center">Delete</th>
                  </tr>
                </thead>
-@@ -583,6 +586,11 @@
+@@ -585,6 +588,11 @@
                          class="w-6 h-6 inline-block cursor-pointer"
                        />
                      </td>
@@ -367,13 +371,13 @@ index e20b2e0..9229334 100644
 +                        <ArrowUpTray class="w-6 h-6 inline-block" />
 +                      </a>
 +                    </td>
-                     <td class="text-center">
-                       <input type="checkbox" class="toggle" bind:checked={p.logging_enabled} onclick={saveLogging(p.id)} />
-                     </td>
-@@ -602,13 +610,11 @@
-                         class="w-6 h-6 inline-block cursor-pointer"
-                       />
-                     </td>
+                     {#if !data.logging_elsewhere}
+                       <td class="text-center">
+                         <input type="checkbox" class="toggle" bind:checked={p.logging_enabled} onclick={saveLogging(p.id)} />
+@@ -606,13 +614,11 @@
+                         />
+                       </td>
+                     {/if}
 -                    <!-- <td>
 -                            <a href="/editor?project={p.id}">
 -                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
@@ -390,7 +394,7 @@ index e20b2e0..9229334 100644
                        <Trash
                          onclick={setProjectInactive}
 diff --git a/frontend/src/routes/editor/+page.svelte b/frontend/src/routes/editor/+page.svelte
-index 4cb08f7..8e0c111 100644
+index 4cb08f7..19f305a 100644
 --- a/frontend/src/routes/editor/+page.svelte
 +++ b/frontend/src/routes/editor/+page.svelte
 @@ -1,6 +1,7 @@
@@ -425,7 +429,7 @@ index 4cb08f7..8e0c111 100644
    onMount(() => {
      windowAPI = (window as any)?.api;
  
-@@ -143,8 +154,21 @@
+@@ -143,8 +154,22 @@
            console.log(`Error loading settings: ${e}`);
          }
        })();
@@ -435,8 +439,9 @@ index 4cb08f7..8e0c111 100644
 +      (async () => {
 +        try {
 +          loadProject(await windowAPI.invoke("load-project"));
-+        } catch {
++        } catch (e) {
 +          // Saving the empty editor would overwrite the stored project, so leave instead.
++          console.error(`Could not load the project: ${e}`);
 +          window.location.href = "/dashboard/";
 +          return;
 +        }
@@ -448,7 +453,7 @@ index 4cb08f7..8e0c111 100644
        window.location.href = "/dashboard/";
      }
  
-@@ -874,7 +898,9 @@
+@@ -874,7 +899,9 @@
  
        <li>&nbsp;<br /><br /></li>
  

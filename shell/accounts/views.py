@@ -36,7 +36,7 @@ def sign_up(request):
     if request.method != "POST" or code is None or not form.is_valid():
         return show_sign_up(request, form)
 
-    Attempt.objects.create(kind=Attempt.Kind.SIGN_UP, ip=ip)
+    record_attempt(Attempt.Kind.SIGN_UP, ip)
     del request.session["new_code"]
     try:
         participant = Participant.objects.create(code=code, **form.cleaned_data)
@@ -67,7 +67,7 @@ def sign_in(request):
 
     participant = Participant.objects.filter(code=form.cleaned_data["code"]).first()
     if participant is None:
-        Attempt.objects.create(kind=Attempt.Kind.FAILED_SIGN_IN, ip=ip)
+        record_attempt(Attempt.Kind.FAILED_SIGN_IN, ip)
         form.add_error("code", settings.STUDY.texts["wrong_id"])
         return render(request, "accounts/sign_in.html", {"form": form})
     sign_in_as(request, participant)
@@ -89,3 +89,9 @@ def client_ip(request) -> str:
 def is_blocked(ip: str, kind: str, allowed: int) -> bool:
     since = timezone.now() - WINDOW
     return Attempt.objects.filter(kind=kind, ip=ip, at__gte=since).count() >= allowed
+
+
+def record_attempt(kind: str, ip: str) -> None:
+    """Store the attempt and forget every attempt older than the window: IP addresses are kept for minutes, not months."""
+    Attempt.objects.filter(at__lt=timezone.now() - WINDOW).delete()
+    Attempt.objects.create(kind=kind, ip=ip)

@@ -55,17 +55,27 @@ def log(request):
     """Store one conversation event from Tilbot's ShellLogger (patch 0002)."""
     if not has_secret(request):
         return HttpResponseForbidden()
+    if not settings.STUDY.transcripts:
+        return HttpResponse(status=204)
     try:
         TranscriptLine.objects.create(
             participant_id=read_token(request.POST["participant_id"]),
             conversation=request.POST["conversation"],
-            seq=int(request.POST["seq"]),
+            seq=parse_seq(request.POST["seq"]),
             event=request.POST["event"],
             text=request.POST.get("detail", ""),
         )
     except (KeyError, ValueError, signing.BadSignature) as error:
         return HttpResponseBadRequest(repr(error))
     return HttpResponse(status=204)
+
+
+def parse_seq(raw: str) -> int:
+    """Return the line number, or raise ValueError below zero, so a bad one is a 400, not a 500."""
+    seq = int(raw)
+    if seq < 0:
+        raise ValueError(f"seq {seq} is negative")
+    return seq
 
 
 def has_secret(request) -> bool:

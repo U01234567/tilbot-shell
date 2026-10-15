@@ -1,8 +1,11 @@
+from datetime import timedelta
+
 import pytest
+from django.utils import timezone
 
 from accounts.codes import ALPHABET, LENGTH, new_code, normalize
 from accounts.models import Attempt, Participant
-from accounts.views import FAILED_SIGN_INS_ALLOWED
+from accounts.views import FAILED_SIGN_INS_ALLOWED, WINDOW
 
 
 def test_new_code_uses_only_the_alphabet():
@@ -46,3 +49,11 @@ def test_too_many_failed_sign_ins_block_the_address(client):
     )
     response = client.post("/sign-in", {"code": "ZZZZ"})
     assert response.status_code == 429
+
+
+@pytest.mark.django_db
+def test_old_attempts_are_forgotten(client):
+    Attempt.objects.create(kind=Attempt.Kind.FAILED_SIGN_IN, ip="127.0.0.1")
+    Attempt.objects.update(at=timezone.now() - WINDOW - timedelta(minutes=1))  # auto_now_add ignores a given time
+    client.post("/sign-in", {"code": "ZZZZ"})
+    assert Attempt.objects.count() == 1

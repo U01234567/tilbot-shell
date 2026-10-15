@@ -11,7 +11,6 @@ from django.core.exceptions import ImproperlyConfigured
 
 from config.project import load_study
 
-SHELL_VERSION = "0.7.0"
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
@@ -30,7 +29,7 @@ BOT_URL = f"https://{required('BOT_HOST')}"
 BRIDGE_SECRET = required("BRIDGE_SECRET")
 FIELD_ENCRYPTION_KEY = required("FIELD_ENCRYPTION_KEY")
 
-# The study: /project/project.toml and /project/questionnaire.toml.
+# The study: project/project.toml and project/questionnaire.toml.
 PROJECT_DIR = Path(required("PROJECT_DIR"))
 STUDY = load_study(PROJECT_DIR)
 
@@ -40,7 +39,7 @@ CSRF_TRUSTED_ORIGINS = [f"https://{SHELL_HOST}"]
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")  # Caddy handles HTTPS
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
-SESSION_COOKIE_AGE = 60 * 60 * 12  # seconds; the same as the chat token (bridge/tokens.py)
+SESSION_COOKIE_AGE = 60 * 60 * 12  # seconds; also how long a chat token stays valid (bridge/tokens.py)
 
 INSTALLED_APPS = [
     "django.contrib.sessions",
@@ -48,7 +47,7 @@ INSTALLED_APPS = [
     "accounts",
     "records",
     "bridge",
-    # phase2_feedback, phase3_support and monitor join when they get models or pages.
+    # phase2_feedback, phase3_questions and monitor join when they get models or pages.
     # phase1_collect is plain Python (rules only) and needs no entry here.
 ]
 
@@ -88,9 +87,8 @@ DATABASES = {
 }
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-LANGUAGE_CODE = "en"  # Django's own messages; the participant pages use STUDY.texts and STUDY.language
-TIME_ZONE = "Europe/Amsterdam"
-USE_I18N = True
+LANGUAGE_CODE = STUDY.language  # Django's own form messages follow the study's language too
+TIME_ZONE = STUDY.time_zone
 USE_TZ = True
 
 # Caddy serves the collected files from the shared "static" volume.

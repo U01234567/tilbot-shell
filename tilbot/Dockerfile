@@ -29,7 +29,6 @@ RUN git init --quiet \
 COPY patches/ /patches/
 RUN for patch in /patches/*.patch; do [ -e "$patch" ] || continue; git apply "$patch"; done
 
-# Our own chat route gets copied in at this point, once it exists.
 
 # The install command from Tilbot's own compose file, then the production build of the chat.
 RUN yarn install --immutable \

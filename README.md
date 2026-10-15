@@ -2,6 +2,8 @@
 
 A framework for research chatbots that get to know a participant, give feedback, and then answer their questions. It wraps Tilbot for the conversation and vector-similarity-intent for understanding free text, and adds what a study needs around them: participant accounts, encrypted storage, rules, a knowledge base and a dashboard. One study at a time, defined entirely in one project folder; the same framework serves patients, voters, students or any other group.
 
+**Status: version 0.7.** Phase 1 (collect) works end to end: sign-up, the chat, storing answers and deciding follow-ups. Phase 2, phase 3, the knowledge base, the staff dashboard and data export are not built yet; see [known gaps](docs/decisions.md#known-gaps-in-version-07). The descriptions below are the framework as a whole.
+
 ## Quick start
 
 You need Docker, running, and Python 3.11+. Then:
@@ -25,8 +27,8 @@ The framework fixes the shape; the project folder fills it in.
 | **vector-similarity-intent** | the interpreter: matches free text against the options the shell gives it | built from a pinned commit, `vector-similarity-intent/` |
 | **shell** (Django) | accounts, participant data, rules, feedback, the knowledge base, the dashboard | `shell/` |
 | **Participant database** | who signed up, their answers and transcripts, encrypted | Postgres |
-| **Knowledge base** | question–answer pairs grouped by topic, with optional links | `/project/knowledge.xlsx` |
-| **Styling** | the study's name, language, texts and colours | `/project/` |
+| **Knowledge base** | question–answer pairs grouped by topic, with optional links | `project/knowledge.xlsx` |
+| **Styling** | the study's name, language, texts and colours | `project/` |
 
 And three phases, always in this order:
 
@@ -34,13 +36,13 @@ And three phases, always in this order:
 2. **Feedback.** The shell turns the answers into feedback: sentences, a narrative with placeholders, charts.
 3. **Questions.** The participant asks whatever they want. The shell matches the question to the knowledge base (topic first, then question) and answers, using the participant's own data where the answer calls for it.
 
-Everything a study decides (its language and texts, age range, options, thresholds, feedback templates, knowledge base, theme, the Tilbot flowchart, and its ethics choices) lives in `/project/`, which is never committed. `project-example/` is the empty template and lists what a study has to decide.
+Everything a study decides (its language and texts, age range, options, thresholds, feedback templates, knowledge base, theme, the Tilbot flowchart, and its ethics choices) lives in `project/`, a folder next to `start_shell.py` that is never committed (inside the containers it appears as `/project`). `project-example/` is the empty template and lists what a study has to decide.
 
 ## Read next
 
 - [docs/architecture.md](docs/architecture.md): every folder, the contract between shell and Tilbot, how to build the questionnaire in Tilbot, the Caddyfile explained.
 - [docs/decisions.md](docs/decisions.md): the big choices (Django, Postgres, Caddy, patches, …), why, and what we turned down; and the known gaps of this version.
-- [docs/operations.md](docs/operations.md): setup, putting a Tilbot project online, keys, backups, updates.
+- [docs/operations.md](docs/operations.md): setup on a new computer, your first chat, keys, backups, updates, and what to do when something is wrong.
 - [ETHICS.md](ETHICS.md): what the software stores, where, and who can read it.
 
 ## Built with

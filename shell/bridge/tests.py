@@ -1,3 +1,5 @@
+import dataclasses
+
 import pytest
 from django.db import connection
 
@@ -5,12 +7,14 @@ from accounts.models import Participant
 from accounts.session import SESSION_KEY
 from bridge.tokens import make_token
 from config.project import Item, Study
-from records.models import Answer
+from records.models import Answer, TranscriptLine
 
 SECRET = "test-secret"
 STUDY = Study(
     name="Test",
     language="en",
+    time_zone="UTC",
+    transcripts=True,
     tilbot_project_id="0" * 32,
     age_min=1,
     age_max=150,
@@ -82,3 +86,21 @@ def test_chat_without_a_linked_project_says_so(client, participant):
     session.save()
     response = client.get("/chat")
     assert "No Tilbot project is linked yet" in response.content.decode()
+
+
+def post_log(client, participant):
+    return client.post("/bridge/log", {
+        "participant_id": make_token(participant.pk),
+        "conversation": "c1", "seq": "0", "event": "message_user", "detail": "hello", "bridge_secret": SECRET,
+    })
+
+
+def test_transcripts_are_kept_when_the_study_says_so(client, participant):
+    assert post_log(client, participant).status_code == 204
+    assert TranscriptLine.objects.get().text == "hello"
+
+
+def test_transcripts_are_dropped_when_the_study_says_no(client, participant, settings):
+    settings.STUDY = dataclasses.replace(STUDY, transcripts=False)
+    assert post_log(client, participant).status_code == 204
+    assert not TranscriptLine.objects.exists()
