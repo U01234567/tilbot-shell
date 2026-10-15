@@ -29,6 +29,7 @@ SECRETS = (
 # A new value for these locks out what is already stored, so they are never replaced once a database exists.
 DATA_SECRETS = {"POSTGRES_PASSWORD", "FIELD_ENCRYPTION_KEY"}
 DATABASE_VOLUME = "tilbot-shell_db"  # the "db" volume of compose project "tilbot-shell"
+CA_VOLUME = "tilbot-shell-caddy-ca"  # external in compose.yaml, so `down -v` keeps it
 STARTUP_SECONDS = 15  # long enough for a service that fails at start-up to have stopped or restarted
 
 # Where start_shell.py can't trust a certificate without your password, it shows the command instead.
@@ -138,6 +139,7 @@ def up() -> None:
     if not (ROOT / "project").exists():
         shutil.copytree(ROOT / "project-example", ROOT / "project")
         print("Created project/ from project-example/. Replace the example content before real use.")
+    subprocess.run(["docker", "volume", "create", CA_VOLUME], capture_output=True, check=True)
     compose("up", "--build", "--detach")
 
     print(f"Checking that everything stays up ({STARTUP_SECONDS} seconds)...")

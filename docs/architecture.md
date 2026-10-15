@@ -113,7 +113,7 @@ The save calls only work in a chat opened from the shell's chat page, because on
 - **`{$SHELL_HOST} { … }`** is the shell. `encode gzip` compresses responses.
 - **The `header` block** sets the security headers:
   - `Content-Security-Policy` allows only the shell's own scripts and styles, and frames only from `BOT_HOST`. Inline styles are allowed for Django's own pages. `frame-ancestors 'none'` stops other sites from framing the shell.
-  - `Strict-Transport-Security` tells browsers to use HTTPS only.
+  - `Strict-Transport-Security` tells browsers to use HTTPS only, for a year (`HSTS_MAX_AGE` in `compose.yaml`). In development the age is 0: on `localhost` it would also force HTTPS on every other local project, and 0 makes browsers forget an earlier one.
   - `X-Content-Type-Options` and `Referrer-Policy` are standard hardening.
 - **`handle /bridge/*`** answers 404 from outside, because Tilbot reaches the bridge inside Docker.
 - **`handle /static/*`** serves CSS and images from the shared `static` volume, filled by `collectstatic`.

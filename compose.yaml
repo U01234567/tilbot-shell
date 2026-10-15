@@ -23,10 +23,12 @@ services:
     environment:
       SHELL_HOST: ${SHELL_HOST}
       BOT_HOST: ${BOT_HOST}
+      HSTS_MAX_AGE: "31536000"   # seconds: browsers use only HTTPS for the shell for a year
     volumes:
       - ./proxy/Caddyfile:/etc/caddy/Caddyfile:ro
       - static:/srv/static:ro
       - caddy-data:/data
+      - caddy-ca:/data/caddy/pki   # the local certificate authority, kept apart (see below)
 
   shell:
     build: ./shell
@@ -105,6 +107,11 @@ services:
 volumes:
   static:
   caddy-data:
+  # Caddy's local root certificate. External, so `down -v` keeps it and a computer trusts it once.
+  # start_shell.py up creates it.
+  caddy-ca:
+    external: true
+    name: tilbot-shell-caddy-ca
   db:
   mongo:
   tilbot-projects:

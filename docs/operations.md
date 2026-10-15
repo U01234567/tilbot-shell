@@ -23,13 +23,15 @@ Every command runs from the repository root. `start_shell.py` picks the right co
    ```
    The first run creates `.env` with fresh secrets. You should see **"Everything is running."** If a service is named as not running, its log says why: `python start_shell.py logs <service>`.
 3. **Back up the encryption key.** Copy `FIELD_ENCRYPTION_KEY` from `.env` to two safe places (see [Keys](#keys)).
-4. **Trust the local certificates,** once per computer.
+4. **Trust the local certificates,** once per computer. Caddy keeps its root certificate in the volume `tilbot-shell-caddy-ca`, which `down -v` leaves alone, so this stays valid.
    ```
    python start_shell.py trust
    ```
    On Windows it asks you to confirm, then says **"Trusted."** On macOS and Linux it prints one command to run yourself. Restart your browser afterwards. Firefox may need the file imported under Settings, Certificates, Authorities.
 
    Without this, accept the browser's warning on https://localhost **and** https://bot.localhost. Caddy renews its certificates every 12 hours, so the warning comes back, and until https://bot.localhost is accepted the chat stays blank.
+
+   To start with a new root certificate (rarely needed): `python start_shell.py down`, then `docker volume rm tilbot-shell-caddy-ca`, then `up` and `trust`. Remove the old one under "Manage user certificates" (Windows) or Keychain Access (macOS).
 5. **Run the tests.**
    ```
    python start_shell.py exec shell pytest
@@ -43,10 +45,12 @@ Every command runs from the repository root. `start_shell.py` picks the right co
 |---|---|
 | "Docker is not running" | Start Docker Desktop, wait until it says it is running, try again |
 | "Not running: *service*" after `up` | `python start_shell.py logs <service>`; a port in use is a common cause |
-| A browser error inside the chat frame | Open https://bot.localhost once, or run `python start_shell.py trust` |
+| A certificate warning on https://localhost | `python start_shell.py trust`, then close **every** browser window, private ones too, and reopen |
+| A browser error inside the chat frame | The same, or open https://bot.localhost once and accept the warning |
 | "No Tilbot project is linked yet" | Follow [your first chat](#your-first-chat-start-to-finish) |
 | "… is empty in .env, but the database was made with the old value" | Put the value back from your backup (see [Keys](#keys)) |
 | The dashboard refuses the admin password | It is `TILBOT_ADMIN_PASSWORD` in `.env`, unless someone changed it under "Your account". An admin made before that setting existed still has `admin`: log in with that and change it at once |
+| The admin password is lost | Delete only the admin account; projects belong to researcher accounts and stay. `python start_shell.py exec mongo mongosh tilbot --eval "db.users.deleteOne({role: 99})"`. The next visit to the login page makes `admin` again, with the password from `.env` |
 
 ## Every day
 
@@ -60,7 +64,6 @@ Every command runs from the repository root. `start_shell.py` picks the right co
 | After a change in `/project/` | `python start_shell.py restart shell` |
 | After a model change | `python start_shell.py exec shell python manage.py makemigrations`, then commit the new migration |
 | After changing `shell/requirements.in` | `python start_shell.py lock`, then `up`, then commit `shell/requirements.lock` |
-| After `down -v` | `python start_shell.py trust` again: Caddy made a new certificate |
 
 ## Your first chat, start to finish
 
@@ -93,7 +96,7 @@ Good to know:
   ```
   python start_shell.py down -v
   ```
-  Then delete `.env` and run `python start_shell.py up` and `python start_shell.py trust`.
+  Then delete `.env` and run `python start_shell.py up`. Caddy's root certificate is kept, so there is nothing to trust again.
 
 ## Backups
 

@@ -11,7 +11,7 @@ from django.core.exceptions import ImproperlyConfigured
 
 from config.project import load_study
 
-SHELL_VERSION = "0.1.0"
+SHELL_VERSION = "0.7.0"
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 

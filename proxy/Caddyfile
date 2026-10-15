@@ -6,7 +6,7 @@
 	encode gzip
 	header {
 		Content-Security-Policy "default-src 'self'; frame-src https://{$BOT_HOST}; frame-ancestors 'none'; form-action 'self'; base-uri 'self'; object-src 'none'"
-		Strict-Transport-Security "max-age=31536000"
+		Strict-Transport-Security "max-age={$HSTS_MAX_AGE}"
 		X-Content-Type-Options "nosniff"
 		Referrer-Policy "same-origin"
 	}

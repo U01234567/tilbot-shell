@@ -147,7 +147,7 @@ Questions in phase 3 are matched to the knowledge base by meaning, in two steps:
 
 We use it unchanged and fork it only if matching falls short on a real knowledge base.
 
-## Known gaps in version 0.1
+## Known gaps in version 0.7
 
 - **Not built yet:** phase 2, phase 3 (and so the knowledge base), the monitor dashboard, our own chat route, backups and the update flow in `start_shell.py`.
 - **vector-similarity-intent is started with `--profile phase3`** until phase 3 exists, so developers don't download its model for nothing.

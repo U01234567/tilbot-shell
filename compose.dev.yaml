@@ -12,6 +12,9 @@ services:
   caddy:
     ports:
       - "127.0.0.1:8081:8081"   # Tilbot's researcher dashboard, on this computer only
+    environment:
+      # On localhost, HSTS would force HTTPS on every other local project; 0 also clears it in browsers.
+      HSTS_MAX_AGE: "0"
 
   db:
     ports:
