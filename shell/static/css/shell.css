@@ -28,8 +28,16 @@ input.code { font-size: 1.5rem; letter-spacing: .3em; font-weight: 700; }
 
 button, .button { display: inline-block; padding: .7rem 1.1rem; font: 600 1rem/1 var(--font); color: var(--on-brand); background: var(--brand); border: 0; border-radius: 4px; text-decoration: none; cursor: pointer; }
 .quiet { color: var(--brand); background: transparent; border: 1px solid var(--brand); }
-.actions { display: flex; flex-wrap: wrap; gap: .75rem; }
+.actions { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; }
+.actions form { margin: 0; }
 :focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+/* Researcher pages: a table of facts, and export choices with their explanation. */
+.facts { border-collapse: collapse; margin-bottom: 1.5rem; }
+.facts th { text-align: left; padding: .4rem 1.5rem .4rem 0; color: var(--muted); font-weight: 600; }
+.facts td { padding: .4rem 0; }
+.choice { display: grid; gap: .5rem; justify-items: start; padding: 1rem; border: 1px solid var(--line); border-radius: 4px; background: var(--field); }
+.choice p { margin: 0; color: var(--muted); font-size: .95rem; }
 
 /* The chat page: Tilbot fills the screen, with a small sign-out button below. */
 .chat { height: 100vh; display: grid; grid-template-rows: 1fr auto; }

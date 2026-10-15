@@ -34,20 +34,25 @@ PROJECT_DIR = Path(required("PROJECT_DIR"))
 STUDY = load_study(PROJECT_DIR)
 
 # "shell" is the name Tilbot uses to reach /bridge/ inside the Docker network.
-ALLOWED_HOSTS = [SHELL_HOST, "shell"]
-CSRF_TRUSTED_ORIGINS = [f"https://{SHELL_HOST}"]
+# 127.0.0.1:8081 is the researcher port with the researcher dashboard (compose.dev.yaml publishes it on this computer only).
+RESEARCHER_ORIGIN = "http://127.0.0.1:8081"
+ALLOWED_HOSTS = [SHELL_HOST, "shell", "127.0.0.1"]
+CSRF_TRUSTED_ORIGINS = [f"https://{SHELL_HOST}", RESEARCHER_ORIGIN]
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")  # Caddy handles HTTPS
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 SESSION_COOKIE_AGE = 60 * 60 * 12  # seconds; also how long a chat token stays valid (bridge/tokens.py)
 
 INSTALLED_APPS = [
+    "django.contrib.auth",  # researcher accounts for the dashboard; participants are not users
+    "django.contrib.contenttypes",  # needed by auth
     "django.contrib.sessions",
     "django.contrib.staticfiles",
     "accounts",
     "records",
     "bridge",
-    # phase2_feedback, phase3_questions and monitor join when they get models or pages.
+    "monitor",
+    # phase2_feedback and phase3_questions join when they get models or pages.
     # phase1_collect is plain Python (rules only) and needs no entry here.
 ]
 
@@ -56,6 +61,7 @@ MIDDLEWARE = [
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
@@ -86,6 +92,16 @@ DATABASES = {
     }
 }
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# Researchers log in at /researcher/login (monitor app); participants never use Django's auth.
+LOGIN_URL = "/researcher/login"
+LOGIN_REDIRECT_URL = "/researcher/"
+LOGOUT_REDIRECT_URL = "/researcher/login"
+AUTH_PASSWORD_VALIDATORS = [  # checked by createsuperuser and changepassword
+    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator", "OPTIONS": {"min_length": 12}},
+    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
+]
 
 LANGUAGE_CODE = STUDY.language  # Django's own form messages follow the study's language too
 TIME_ZONE = STUDY.time_zone

@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Researcher · {{ study.name }}{% endblock %}
+{% block content %}
+  <h1>{{ study.name }}</h1>
+  <table class="facts">
+    <tr><th>Participants</th><td>{{ counts.participants }}</td></tr>
+    <tr><th>Answers</th><td>{{ counts.answers }}</td></tr>
+    <tr><th>Transcript lines</th><td>{{ counts.transcript_lines }}</td></tr>
+    <tr><th>Last answer</th><td>{{ last_answer|date:"Y-m-d H:i"|default:"none yet" }}</td></tr>
+  </table>
+  <div class="actions">
+    <a class="button" href="{% url 'export' %}">Export the data</a>
+    <a class="button quiet" href="/dashboard">Tilbot: flowchart and projects</a>
+    <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit" class="quiet">Log out</button></form>
+  </div>
+  <p class="hint">Tilbot holds the conversation, not the participants' data; log in there with the same name and password.</p>
+{% endblock %}

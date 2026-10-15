@@ -2,7 +2,7 @@
 
 A framework for research chatbots that get to know a participant, give feedback, and then answer their questions. It wraps Tilbot for the conversation and vector-similarity-intent for understanding free text, and adds what a study needs around them: participant accounts, encrypted storage, rules, a knowledge base and a dashboard. One study at a time, defined entirely in one project folder; the same framework serves patients, voters, students or any other group.
 
-**Status: version 0.7.** Phase 1 (collect) works end to end: sign-up, the chat, storing answers and deciding follow-ups. Phase 2, phase 3, the knowledge base, the staff dashboard and data export are not built yet; see [known gaps](docs/decisions.md#known-gaps-in-version-07). The descriptions below are the framework as a whole.
+**Status: version 0.7.** Phase 1 (collect) works end to end: sign-up, the chat, storing answers and deciding follow-ups, and a researcher dashboard to export the data. Phase 2, phase 3 and the knowledge base are not built yet; see [known gaps](docs/decisions.md#known-gaps-in-version-07). The descriptions below are the framework as a whole.
 
 ## Quick start
 
@@ -13,9 +13,10 @@ git clone https://github.com/U01234567/tilbot-shell
 cd tilbot-shell
 python start_shell.py up       # first run: creates .env with fresh secrets, builds and starts everything
 python start_shell.py trust    # once per computer: no certificate warnings
+python start_shell.py researcher   # your name and password, for both dashboards
 ```
 
-Open https://localhost. Back up `FIELD_ENCRYPTION_KEY` from `.env` right away. Then [set up your first chat](docs/operations.md#your-first-chat-start-to-finish). What you should see at each step, and what to do if you don't: [docs/operations.md](docs/operations.md).
+Open https://localhost. Back up `FIELD_ENCRYPTION_KEY` from `.env` right away. Then [set up your study, start to finish](docs/operations.md#your-study-start-to-finish). What you should see at each step, and what to do if you don't: [docs/operations.md](docs/operations.md).
 
 ## What every project has
 
@@ -42,7 +43,7 @@ Everything a study decides (its language and texts, age range, options, threshol
 
 - [docs/architecture.md](docs/architecture.md): every folder, the contract between shell and Tilbot, how to build the questionnaire in Tilbot, the Caddyfile explained.
 - [docs/decisions.md](docs/decisions.md): the big choices (Django, Postgres, Caddy, patches, …), why, and what we turned down; and the known gaps of this version.
-- [docs/operations.md](docs/operations.md): setup on a new computer, your first chat, keys, backups, updates, and what to do when something is wrong.
+- [docs/operations.md](docs/operations.md): setup on a new computer, your study start to finish, keys, backups, updates, and what to do when something is wrong.
 - [ETHICS.md](ETHICS.md): what the software stores, where, and who can read it.
 
 ## Built with

@@ -14,6 +14,13 @@ Check this file against the code before every submission.
 | Every chat message, from the participant and the bot, with its time; only if `project.toml` says `transcripts.enabled = true` | Postgres, table `records_transcriptline` | the text is encrypted, as above |
 | Which participant a browser is signed in as, and the code shown on the sign-up page | Postgres, table `django_session` | deleted after 12 hours |
 
+## Researcher accounts
+
+Researchers log in to the shell's dashboard with Django's own accounts (table `auth_user`: a name and a
+hashed password). Participants are not in that table. `python start_shell.py researcher` also makes a Tilbot
+account with the same name and password (MongoDB, hashed). Both dashboards are only reachable from the
+computer that runs the shell.
+
 No names, email addresses, phone numbers or other contact details are asked for or stored.
 The code is the only link between a person and their data. Whoever holds a code can sign in with it.
 
@@ -58,7 +65,9 @@ this has to be fixed before phase 3 is used with real participants.
 
 ## What leaves the machine
 
-- **No participant data**, except backups made by the team.
+- **No participant data**, except backups and exports made by the team. An export (researcher dashboard)
+  contains answers and transcripts decrypted, with either the participants' codes or numbers instead;
+  the page explains the difference. Where exports are kept is the study's decision (`project/README.md`).
 - At build time the machine downloads code and images: Tilbot and vector-similarity-intent from
   GitHub, container images from Docker Hub, Python packages from PyPI, Node packages from npm, and
   for phase 3 the language model from Hugging Face. `python start_shell.py updates` asks GitHub for the

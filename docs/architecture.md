@@ -47,7 +47,7 @@ How the parts fit together, where everything lives, and the contract between the
 | `shell/phase1_collect/` | rules after each answer: valid? follow-ups? | changing how answers are judged |
 | `shell/phase2_feedback/` | feedback (placeholder) | building phase 2 |
 | `shell/phase3_questions/` | questions answered from the knowledge base (placeholder) | building phase 3 |
-| `shell/monitor/` | staff dashboard (placeholder) | building the overview |
+| `shell/monitor/` | the researcher dashboard: counts, and the data export (`export.py` turns the tables into CSV rows) | adding a researcher page |
 | `project-example/` | the shape of `project/`, with dummy content | the project format changes |
 | `project/` | the real study, not committed | the research team changes a setting |
 | `docs/` | this file, `decisions.md`, `operations.md` | something here is no longer true |
@@ -137,13 +137,15 @@ The save calls only work in a chat opened from the shell's chat page, because on
   - `frame-ancestors` lets only the shell show it.
   - `@public` lists the only paths participants need; everything else answers 404.
   - Inside `route`, the API, websocket and project files go to the backend, and pages go to the frontend.
-- **`:8081 { … }`** is Tilbot complete with its dashboard, on plain HTTP. It is reachable only where a compose file publishes port 8081, which is `127.0.0.1` in development.
+- **`:8081 { … }`** is the researcher port, on plain HTTP: the shell's researcher dashboard under `/researcher/` (with their CSS under `/static/`), and Tilbot complete with its dashboard for everything else. It is reachable only where a compose file publishes port 8081, which is `127.0.0.1` in development. The public shell site answers 404 for `/researcher/`.
 
 ## Words used in these docs
 
 - **Shell:** our Django application, everything around Tilbot.
-- **Participant:** a person who signs up and talks to the bot. **Researcher:** who runs the study. **Staff:** anyone with access to the server.
-- **Project folder (`project/`):** the one folder with everything a study decides. Inside the containers it is `/project`.
+- **Researcher dashboard** (`/researcher/`, ours): counts and the data export. **Tilbot's dashboard** (the rest of port 8081): projects and the flowchart editor. `python start_shell.py researcher` gives a person one name and password for both.
+- **Project folder** vs **Tilbot project:** the folder `project/` holds the study's settings; the Tilbot project holds the conversation. `project_id` in `project.toml` links them.
+- **Participant:** a person who signs up and talks to the bot. **Researcher:** who runs the study.
+- **Project folder (`project/`):** the one folder with everything a study decides, apart from the conversation. Inside the containers it is `/project`.
 - **Flowchart:** the conversation as drawn in Tilbot's editor. **Block:** one step in it (a question, a text, a processing step). **Connector:** an arrow leaving a block, with a label that decides where the chat goes next.
 - **Processing block / external link:** a block that sends the participant's answer to another server (here: the shell) and follows the connector that server names.
 - **Reverse proxy (Caddy):** the one program that faces the internet; it handles HTTPS and passes requests to the shell or Tilbot.

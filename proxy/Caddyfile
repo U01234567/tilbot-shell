@@ -20,8 +20,12 @@
 		Referrer-Policy "same-origin"
 	}
 
-	# Tilbot calls /bridge/ inside the Docker network; from outside it does not exist.
+	# Tilbot calls /bridge/ inside the Docker network, and the researcher dashboard lives on the researcher port:
+	# from the public site neither exists.
 	handle /bridge/* {
+		respond 404
+	}
+	handle /researcher/* {
 		respond 404
 	}
 	handle /static/* {
@@ -48,8 +52,18 @@
 	}
 }
 
-# Tilbot's researcher dashboard: edit, import and export projects, start and stop them.
+# The researcher port: the shell's researcher dashboard at /researcher/, and Tilbot's dashboard for the rest.
 # Plain HTTP on port 8081, published to 127.0.0.1 by compose.dev.yaml only.
 :8081 {
-	import tilbot
+	handle /researcher/* {
+		reverse_proxy shell:8000
+	}
+	handle /static/* {
+		uri strip_prefix /static
+		root * /srv/static
+		file_server
+	}
+	handle {
+		import tilbot
+	}
 }

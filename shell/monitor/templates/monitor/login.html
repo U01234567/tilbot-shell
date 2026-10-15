@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Researcher login · {{ study.name }}{% endblock %}
+{% block content %}
+  <h1>Researcher login</h1>
+  <form method="post">
+    {% csrf_token %}
+    {{ form.as_div }}
+    <button type="submit">Log in</button>
+  </form>
+  <p class="hint">Accounts are made on the server: <code>python start_shell.py researcher</code>, one name and password for this dashboard and Tilbot's.</p>
+{% endblock %}

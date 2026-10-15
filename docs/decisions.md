@@ -161,9 +161,27 @@ Tilbot's dashboard account `admin` gets its first password from `.env` (patch 00
 - **Keep Tilbot's `admin`/`admin` and tell people to change it.** Documented advice is forgotten; a known default on a research server is a security hole.
 - **Fall back to `admin` when the setting is missing.** Easier to merge upstream, but a silent default is exactly what we wanted gone.
 
+## Data leaves through the researcher dashboard, by choice
+
+Researchers export the data from the shell's own dashboard, on the researcher port, with two buttons: without codes (participants numbered by sign-up) or with codes. The page says what each means. Researcher accounts are Django's own, made with `python start_shell.py researcher`.
+
+- **A command that writes CSV files.** No login needed, but researchers asked for a page rather than a terminal, and a command can't explain the choice at the moment it is made.
+- **One export, always with codes.** Simpler, but every analysis file would be traceable to a person.
+- **Tilbot's dashboard.** It's Tilbot's code, it can't read the shell's database, and it would need another large patch.
+
+## One account per person, two dashboards
+
+The researcher port has two dashboards: Tilbot's, for the conversation (projects, the flowchart, data tables), and ours at `/researcher/`, for the participants' data (counts and the decrypted export). `python start_shell.py researcher` gives a person one name and password for both: an account in our dashboard, and a Tilbot account made through Tilbot's own "create user" call, with Tilbot's admin password from `.env`. Nobody logs in as Tilbot's admin; it is plumbing.
+
+- **Two separate accounts per person.** Each login guards only what it must, but one researcher running one study then juggles three logins (Tilbot's admin, a Tilbot account, ours) and two meanings of "researcher". Someone who should only build the flowchart can still get a Tilbot account alone, made by hand as admin.
+- **One login for both (single sign-on).** Tilbot would have to trust the shell's login, through a patch in Tilbot's account and session code: far larger than our other patches.
+- **Researcher accounts inside Tilbot.** Tilbot can't read the shell's database, and its accounts live in a store (MongoDB) we keep free of participant data.
+
+The catch: the two passwords are stored apart, so changing one in a dashboard leaves the other as it was.
+
 ## Known gaps in version 0.7
 
-- **Not built yet:** phase 2, phase 3 (and so the knowledge base), the staff dashboard with data export, a chat page in the study's own look, backups and the update flow in `start_shell.py`, and running on a server.
+- **Not built yet:** phase 2, phase 3 (and so the knowledge base), status and logs in the researcher dashboard, a chat page in the study's own look, backups and the update flow in `start_shell.py`, and running on a server.
 - **vector-similarity-intent is started with `--profile phase3`** until phase 3 exists, so developers don't download its model for nothing.
 - **Transcripts are best-effort.** If the shell is down, Tilbot logs an error and that line is lost. Answers are not lost: they are asked again.
 - **The `transcripts.enabled` setting is read by the shell only.** Tilbot still sends every event; the shell discards them. That costs nothing but is worth knowing.

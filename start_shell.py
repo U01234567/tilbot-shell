@@ -2,6 +2,7 @@
 
     python start_shell.py up         create .env and project/ if needed, then build and start everything
     python start_shell.py trust      make this computer trust https://localhost and https://bot.localhost
+    python start_shell.py researcher one name and password for both dashboards on http://127.0.0.1:8081
     python start_shell.py updates    compare the pinned commits in components.toml with upstream
     python start_shell.py lock       regenerate shell/requirements.lock (exact versions with hashes)
     python start_shell.py <anything else>
@@ -147,6 +148,8 @@ def up() -> None:
         print("Created project/ from project-example/. Replace the example content before real use.")
     subprocess.run(["docker", "volume", "create", CA_VOLUME], capture_output=True, check=True)
     compose("up", "--build", "--detach")
+    # Docker can't see a changed Caddyfile, so Caddy is told to read it again; running requests go on.
+    compose("exec", "caddy", "caddy", "reload", "--config", "/etc/caddy/Caddyfile")
 
     print(f"Checking that everything stays up ({STARTUP_SECONDS} seconds)...")
     time.sleep(STARTUP_SECONDS)
@@ -169,6 +172,11 @@ def trust() -> None:
         return
     command = TRUST_COMMANDS.get(system, "import caddy-root.crt as a trusted root certificate in your browser")
     print(f"Saved caddy-root.crt. To trust it, run:\n  {command}\nThen restart your browser.")
+
+
+def researcher() -> None:
+    """One name and password for both dashboards: ours and Tilbot's (shell/monitor/management/commands)."""
+    compose("exec", "shell", "python", "manage.py", "researcher")
 
 
 def updates() -> None:
@@ -197,7 +205,7 @@ def lock() -> None:
     )
 
 
-COMMANDS = {"up": up, "trust": trust, "updates": updates, "lock": lock}
+COMMANDS = {"up": up, "trust": trust, "researcher": researcher, "updates": updates, "lock": lock}
 
 
 def main() -> None:

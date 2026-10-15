@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Export · {{ study.name }}{% endblock %}
+{% block content %}
+  <h1>Export the data</h1>
+  <p>You get a zip with three CSV files: <code>participants.csv</code>, <code>answers.csv</code> and <code>transcripts.csv</code>. Answers and transcripts are decrypted in the file. Times are in {{ study.time_zone }}.</p>
+  <form method="post">
+    {% csrf_token %}
+    <div class="choice">
+      <button type="submit" name="codes" value="without">Without codes</button>
+      <p>Participants are numbered 1, 2, 3 … in order of sign-up, the same number in every file. The files can be joined to each other, but a row cannot be traced to a person. Use this for analysis.</p>
+    </div>
+    <div class="choice">
+      <button type="submit" name="codes" value="with" class="quiet">With codes</button>
+      <p>Each row carries the participant's 4-character code. Whoever has the file and sees a code can link that person to their answers and chat. Use this only when a study needs it, for example to honour a removal request, and treat the file as personal data.</p>
+    </div>
+  </form>
+  <p><a href="{% url 'researcher' %}">Back</a></p>
+{% endblock %}

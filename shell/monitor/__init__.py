@@ -1,6 +1,7 @@
-"""The staff dashboard (not built yet).
+"""The researcher dashboard: how the study is going, and the data export.
 
-Will show, per component: status (Docker healthchecks), recent log lines with participant text
-removed, CPU and memory, and who talks to whom, from the shell's own request log.
-Staff only, and bound to localhost during development.
+Reached only through the researcher port (8081, this computer only), never through the public site.
+Every page needs a researcher login: Django's own user accounts, made with python start_shell.py researcher,
+which also makes a Tilbot account with the same name and password (management/commands/researcher.py).
+Later: status per component, recent log lines, CPU and memory.
 """

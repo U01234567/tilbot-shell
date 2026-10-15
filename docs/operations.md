@@ -37,7 +37,7 @@ Every command runs from the repository root. `start_shell.py` picks the right co
    python start_shell.py exec shell pytest
    ```
    You should see every test pass.
-6. **Open https://localhost.** You should see the study's name and two buttons, sign up and sign in, in the study's language. After signing up, the chat page says "No Tilbot project is linked yet" until you have done [your first chat](#your-first-chat-start-to-finish).
+6. **Open https://localhost.** You should see the study's name and two buttons, sign up and sign in, in the study's language. After signing up, the chat page says "No Tilbot project is linked yet" until you have done [your study, start to finish](#your-study-start-to-finish).
 
 ## If something is wrong
 
@@ -47,10 +47,10 @@ Every command runs from the repository root. `start_shell.py` picks the right co
 | "Not running: *service*" after `up` | `python start_shell.py logs <service>`; a port in use is a common cause |
 | A certificate warning on https://localhost | `python start_shell.py trust`, then close **every** browser window, private ones too, and reopen |
 | A browser error inside the chat frame | The same, or open https://bot.localhost once and accept the warning |
-| "No Tilbot project is linked yet" | Follow [your first chat](#your-first-chat-start-to-finish) |
+| "No Tilbot project is linked yet" | Follow [your study, start to finish](#your-study-start-to-finish) |
 | "… is empty in .env, but the database was made with the old value" | Put the value back from your backup (see [Keys](#keys)) |
-| The dashboard refuses the admin password | It is `TILBOT_ADMIN_PASSWORD` in `.env`, unless someone changed it under "Your account". An admin made before that setting existed still has `admin`: log in with that and change it at once |
-| The admin password is lost | Delete only the admin account; projects belong to researcher accounts and stay. `python start_shell.py exec mongo mongosh tilbot --eval "db.users.deleteOne({role: 99})"`. The next visit to the login page makes `admin` again, with the password from `.env` |
+| `researcher` says Tilbot refused its admin password | Someone changed it in Tilbot's dashboard. Put the same value in `.env` as `TILBOT_ADMIN_PASSWORD` and run `up`, or reset the admin (next row) |
+| Tilbot's admin password is lost | Delete only the admin account; projects belong to Tilbot accounts and stay. `python start_shell.py exec mongo mongosh tilbot --eval "db.users.deleteOne({role: 99})"`. The next visit to the login page makes `admin` again, with the password from `.env` |
 
 ## Running a study
 
@@ -60,6 +60,8 @@ Every command runs from the repository root. `start_shell.py` picks the right co
 | Stop | `python start_shell.py down` |
 | After a change in `project/` | `python start_shell.py restart shell` |
 | See what the shell is doing | `python start_shell.py logs -f shell` |
+| How many took part, export the data | http://127.0.0.1:8081/researcher/ (see [the researcher dashboard](#the-researcher-dashboard-and-the-data-export)) |
+| An account for someone, on both dashboards | `python start_shell.py researcher` |
 
 ## Developing
 
@@ -70,28 +72,40 @@ Every command runs from the repository root. `start_shell.py` picks the right co
 | After a model change | `python start_shell.py exec shell python manage.py makemigrations`, then commit the new migration |
 | After changing `shell/requirements.in` | `python start_shell.py lock`, then `up`, then commit `shell/requirements.lock` |
 
-## Your first chat, start to finish
+## Your study, start to finish
 
-The flowchart is made in Tilbot's editor, in the browser, and stored on the Tilbot server.
+A study has two halves, linked by one id. **The project folder** (`project/`) holds the study's settings: texts, age range, questionnaire thresholds, theme. **The Tilbot project** holds the conversation: the flowchart, drawn in Tilbot's editor in the browser. Both dashboards are on the researcher port, http://127.0.0.1:8081, and one name and password opens both.
 
-1. **Log in to the dashboard** at http://127.0.0.1:8081/login as `admin`, with the password from `TILBOT_ADMIN_PASSWORD` in `.env`. Tilbot creates that account on the first visit (you should see "No admin account was found, so I created it"); there is no `admin`/`admin`. To change the password later: "Your account" in the dashboard. `.env` only holds the first one.
-2. **Create a researcher account.** As `admin`, create a user, then log in as that user. Only users can own projects; the admin account can't.
-3. **Create a project** with "+ New project".
-4. **Draw the flowchart.** The pencil icon opens the editor. Save with the save icon in the editor's menu; "Project saved!" confirms it. How to build the questionnaire is in [architecture.md](architecture.md#phase-1-in-tilbots-editor).
-5. **Switch it to running** in the dashboard.
-6. **Connect it to the shell.** The globe icon opens `/?project=<id>`. Copy that id into `[tilbot] project_id` in `project/project.toml`, then restart the shell.
-7. **Test it.** Sign up at https://localhost. You should see the bot's first message inside the page. Answer a question, then check that the answer was stored:
+1. **Make your account,** once per person.
    ```
-   python start_shell.py exec db psql -U shell shell -c "select participant_id, item, at from records_answer"
+   python start_shell.py researcher
    ```
-   You should see one row per answer. The values themselves are encrypted and don't show here; exporting them for analysis is not built yet (known gap).
-8. **Back it up.** The up-arrow icon downloads the project as one `.tilbot` file; keep it in `project/tilbot/`. Tilbot keeps its projects in a Docker volume, which `down -v` deletes. To move a project to another computer or a server, import that file there.
+   It asks for a name and a password of at least 12 characters, twice. You should see **"Ready. Log in with <name> on both dashboards"**. The same name and password now open our researcher dashboard and Tilbot's dashboard. Run it again with the same name to set a new password for our dashboard; Tilbot's password is changed under "Your account" in Tilbot's dashboard.
+2. **Fill in the project folder.** Edit `project/project.toml` (name, language, texts, ages, genders, time zone, transcripts) and `project/questionnaire.toml` (each item's scale and threshold), then `python start_shell.py restart shell`. Every line has a comment saying what it does.
+3. **Make the Tilbot project.** Open http://127.0.0.1:8081/dashboard, log in with your name and password, and click "+ New project".
+4. **Draw the flowchart.** The pencil icon opens the editor. Each question gets a save block whose `item` matches an id in `questionnaire.toml`; [architecture.md](architecture.md#phase-1-in-tilbots-editor) shows how. Save with the save icon; "Project saved!" confirms it.
+5. **Link the two.** Switch the project to running in Tilbot's dashboard. The globe icon opens `/?project=<id>`: copy that id into `[tilbot] project_id` in `project/project.toml`, then `python start_shell.py restart shell`.
+6. **Test it.** Sign up at https://localhost: you should see the bot's first message inside the page. Answer a question, then open the [researcher dashboard](#the-researcher-dashboard-and-the-data-export): you should see one participant and one answer more than before.
+7. **Run the study.** Participants sign up and chat; you follow the counts in the researcher dashboard and export at the end.
+8. **Back up the conversation.** In Tilbot's dashboard, the up-arrow icon downloads the project as one `.tilbot` file; keep it in `project/tilbot/`. Tilbot keeps its projects in a Docker volume, which `down -v` deletes. To move a project to another computer or a server, import that file there.
 
 Good to know:
 
 - **Saving changes the running chat** for every new conversation. Data tables and avatars are stored the moment you add them. While a study runs, work on a copy: a new project with the exported file imported into it.
 - **The editor has no "Load project" button in the browser.** Use Import in the dashboard.
 - **Transcripts** are stored by the shell, encrypted, when `project/project.toml` has `transcripts.enabled = true` (the default). Tilbot's own logging is off and its switch hidden; nothing is ever written in plain text.
+- **Tilbot's `admin` account** only exists to make Tilbot accounts, and `start_shell.py researcher` uses it for you; its password is `TILBOT_ADMIN_PASSWORD` in `.env`. Don't change that password in Tilbot's dashboard, or the command can no longer make accounts.
+- **Someone who should only build the flowchart,** a student assistant for example: log in to Tilbot's dashboard as `admin` and make their Tilbot account there by hand. They then can't see the participants' data.
+
+## The researcher dashboard and the data export
+
+The shell's own dashboard shows how the study is going and hands out the data: http://127.0.0.1:8081/researcher/ (exactly this address; `localhost:8081` is refused). Log in with the account from [step 1 above](#your-study-start-to-finish). You should see the number of participants, answers and transcript lines, the time of the last answer, and a link to Tilbot's dashboard.
+
+**Export.** "Export the data" offers two choices, each explained on the page:
+- **Without codes:** participants are numbered 1, 2, 3 … in order of sign-up. The files can be joined to each other, but not traced to a person. Use this for analysis.
+- **With codes:** every row carries the participant's 4-character code. Only when the study needs it, for example for a removal request; the file is personal data.
+
+Both give one zip with `participants.csv`, `answers.csv` and `transcripts.csv`, decrypted, with times in the study's time zone. **The export is the one place where data leaves the database unencrypted:** store it where the study's data management plan says, never in the repository folder (`.gitignore` skips zips as a safety net).
 
 ## On a server
 

@@ -27,4 +27,5 @@ applications need them; `ETHICS.md` in the repository only describes the softwar
 - **Data category:** whether the data is special-category data under the GDPR (health, political opinions, …), which decides how strict the rest must be.
 - **Retention:** how long answers, transcripts and the sign-in attempt log are kept, and how they are deleted after the study.
 - **Removal requests:** whether participants can ask for their data to be removed, given that only their code identifies them.
-- **Access:** who has access to the server, the encryption key and the backups.
+- **Access:** who has access to the server, the encryption key, the backups and the researcher dashboard.
+- **Exports:** who may export the data, with or without codes, and where the exported files are kept.
