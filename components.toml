@@ -11,8 +11,14 @@ repo = "https://github.com/tilbotio/tilbot-refactor"
 commit = "3de07b06dda0d1b46ed7cc4fceea41110cd119e7"
 pinned_on = 2026-10-12
 upstream_version = "2.0.0"   # "version" in Tilbot's package.json
-patches = ["0001-forward-participant", "0002-shell-logger"]
-note = "First pin, the newest commit on 12 Oct 2026. The patches were made against a zip of the same day."
+patches = [
+  "0001-forward-participant",
+  "0002-shell-logger",
+  "0003-embed-cross-origin",
+  "0004-safe-variable-sql",
+  "0005-browser-editor",
+]
+note = "First pin, the newest commit on 12 Oct 2026. 0001 and 0002 were made against a zip of the same day, 0003 to 0005 against this commit."
 
 [vector-similarity-intent]
 repo = "https://github.com/tilbotio/vector-similarity-intent"

@@ -13,7 +13,7 @@ from pathlib import Path
 
 @dataclass(frozen=True)
 class Item:
-    """One questionnaire item. Its question text lives in Tilbot's studio."""
+    """One questionnaire item. Its question text lives in Tilbot's editor."""
 
     id: str
     scale_min: int

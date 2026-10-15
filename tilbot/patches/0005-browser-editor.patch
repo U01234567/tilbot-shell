@@ -1,0 +1,473 @@
+diff --git a/backend/db/project.ts b/backend/db/project.ts
+index 394c08f..2d9f92a 100644
+--- a/backend/db/project.ts
++++ b/backend/db/project.ts
+@@ -20,6 +20,7 @@ export interface ProjectSchemaInterface extends Document {
+   active: boolean;
+   // Instance methods go here
+   fromModel(model: Object): void;
++  toModel(): Object;
+   getLogs(): Promise<string[]>;
+ }
+ 
+@@ -121,6 +122,25 @@ export const ProjectSchema = new Schema<ProjectSchemaInterface>(
+         this.blocks = model.blocks;
+       },
+ 
++      /**
++       * Export the project values, the counterpart of fromModel().
++       *
++       * @return {Object} The project as the editor and .tilbot files store it.
++       */
++      toModel() {
++        return {
++          name: this.name,
++          current_block_id: this.current_block_id,
++          starting_block_id: this.starting_block_id,
++          canvas_width: this.canvas_width,
++          canvas_height: this.canvas_height,
++          bot_name: this.bot_name,
++          variables: this.variables,
++          settings: this.settings,
++          blocks: this.blocks,
++        };
++      },
++
+       /**
+        * Retrieve this project's logs
+        *
+diff --git a/backend/server.ts b/backend/server.ts
+index a112e38..eda374f 100644
+--- a/backend/server.ts
++++ b/backend/server.ts
+@@ -1,7 +1,7 @@
+ import fs from "fs";
+-import { dirname, resolve } from "path";
++import { basename, dirname, resolve } from "path";
+ import { fileURLToPath } from "url";
+-import Fastify, { FastifyInstance } from "fastify";
++import Fastify, { FastifyInstance, FastifyRequest } from "fastify";
+ import { fastifySession } from "@fastify/session";
+ import { fastifyCookie } from "@fastify/cookie";
+ import fastifyCORS from "@fastify/cors";
+@@ -404,6 +404,135 @@ app.post("/api/import_project", async (req, res) => {
+   await project.save();
+ });
+ 
++/*
++ * The editor in a browser. It sends the same actions as the desktop app (app/electron-main.ts),
++ * for a project stored on this server, owned by the user who is logged in.
++ */
++const EDITOR_BODY_LIMIT = 20 * 1024 * 1024; // bytes; a data table imported from Excel can be large
++const AVATAR_FILE = /\.(png|jpe?g|svg)$/i; // the same types the desktop app accepts
++
++// The project must belong to the user; its id is checked before it names a folder on disk.
++async function ownProject(req: FastifyRequest, projectId: unknown) {
++  const session: any = req.session;
++  if (session.username == undefined) {
++    throw new TilBotNotLoggedInError();
++  }
++  // Another site can't add this header without a CORS preflight, which this server refuses,
++  // so a POST that carries it was sent by the editor itself, not by a forged form.
++  if (req.method === "POST" && req.headers["x-tilbot-editor"] !== "1") {
++    throw new TilBotError();
++  }
++  if (typeof projectId !== "string" || !/^[0-9a-f]{32}$/.test(projectId)) {
++    throw new TilBotProjectNotFoundError(String(projectId));
++  }
++  return await ProjectModel.getById(projectId, {
++    user_id: session.username,
++    active: true,
++  });
++}
++
++// The project's data tables. A running chat opens the same file, so it is created if missing.
++function openVariables(projectId: string): VariableDb {
++  const dir = `${__dirname}/projects/${projectId}`;
++  mkdirSync(dir, { recursive: true });
++  return new VariableDb(`${dir}/variables.db`);
++}
++
++app.get("/api/editor_project", async (req, res) => {
++  const query: any = req.query;
++  const project = await ownProject(req, query.projectid);
++  return project.toModel();
++});
++
++app.post(
++  "/api/editor_project",
++  { bodyLimit: EDITOR_BODY_LIMIT },
++  async (req, res) => {
++    const body: any = req.body;
++    const project = await ownProject(req, body.projectid);
++    if (!(body.project?.settings instanceof Object)) {
++      throw new TilBotError();
++    }
++    project.fromModel(body.project);
++    await project.save();
++  }
++);
++
++const VARIABLE_ACTIONS: Record<string, (db: VariableDb, data: any) => unknown> =
++  {
++    "get-data-table": (db, tableName) => db.getTable(tableName),
++    "get-data-table-cols": (db, tableName) => db.getColNames(tableName),
++    "get-data-table-column": (db, data) =>
++      db.getColumn(data.tableName, data.columnName, data.filterCol, data.filterVal),
++    "get-data-table-cell": (db, data) =>
++      db.getCell(data.tableName, data.columnName, data.val),
++    "get-data-table-random-row": (db, data) => db.getRandomRow(data.tableName),
++    "save-variable": (db, data) => {
++      db.delete(data.prevVariablename);
++      db.save(data.name, data.data);
++      return true;
++    },
++  };
++
++app.post(
++  "/api/editor_variables",
++  { bodyLimit: EDITOR_BODY_LIMIT },
++  async (req, res) => {
++    const body: any = req.body;
++    if (!Object.hasOwn(VARIABLE_ACTIONS, body.channel)) {
++      throw new TilBotError();
++    }
++    const action = VARIABLE_ACTIONS[body.channel];
++    const project = await ownProject(req, body.projectid);
++    const db = openVariables(project.id);
++    try {
++      // Wrapped, so a null result is still a JSON reply, never text the editor reads as a refusal.
++      return { result: action(db, body.data) };
++    } finally {
++      db.close();
++    }
++  }
++);
++
++// An earlier avatar is not deleted: the saved project, and a running chat, may still use it.
++app.post("/api/editor_avatar", async (req, res) => {
++  const data = await req.file();
++  const project = await ownProject(
++    req,
++    (data?.fields.projectid as MultipartValue)?.value
++  );
++  const filename = basename(data!.filename);
++  if (!AVATAR_FILE.test(filename)) {
++    throw new TilBotError();
++  }
++
++  const dir = `${__dirname}/proj_pub/${project.id}/avatar`;
++  mkdirSync(dir, { recursive: true });
++  writeFileSync(`${dir}/${filename}`, await data!.toBuffer());
++  return { filename };
++});
++
++// The project as a .tilbot file, the same format the desktop app saves and the import above reads.
++app.get("/api/export_project", async (req, res) => {
++  const query: any = req.query;
++  const project = await ownProject(req, query.projectid);
++
++  const zip = new AdmZip();
++  zip.addFile("project.json", Buffer.from(JSON.stringify(project.toModel())));
++  openVariables(project.id).close();
++  zip.addLocalFile(`${__dirname}/projects/${project.id}/variables.db`);
++  for (const avatar of [project.settings.avatar_file, project.settings.avatar_file_sm]) {
++    if (avatar) {
++      zip.addLocalFile(`${__dirname}/proj_pub/${project.id}/avatar/${basename(avatar)}`, "avatar");
++    }
++  }
++
++  const filename = String(project.settings.project_name).replace(/[^\w -]/g, "_");
++  res.header("Content-Type", "application/zip");
++  res.header("Content-Disposition", `attachment; filename="${filename}.tilbot"`);
++  return zip.toBuffer();
++});
++
+ /**
+  * API call: save a user's settings
+  */
+@@ -523,6 +652,7 @@ app.get("/api/create_conversation", async (req, res) => {
+   const settings = await SettingsModel.findOne({ user_id: project.user_id });
+ 
+   const p = `${__dirname}/projects/${project.id}`;
++  mkdirSync(p, { recursive: true }); // a project made in the browser editor may have no folder yet
+ 
+   const db = new VariableDb(p + "/variables.db");
+ 
+diff --git a/frontend/package.json b/frontend/package.json
+index d6d7181..fb3c7d2 100644
+--- a/frontend/package.json
++++ b/frontend/package.json
+@@ -32,6 +32,7 @@
+     "crypto-js": "^4.1.1",
+     "daisyui": "^4.12.21",
+     "lodash": "^4.17.21",
++    "read-excel-file": "^8.0.3",
+     "svelte-heros-v2": "^2.0.1"
+   }
+ }
+diff --git a/frontend/src/lib/utils/serverEditorApi.ts b/frontend/src/lib/utils/serverEditorApi.ts
+new file mode 100644
+index 0000000..3209304
+--- /dev/null
++++ b/frontend/src/lib/utils/serverEditorApi.ts
+@@ -0,0 +1,100 @@
++import { readSheet } from "read-excel-file/browser";
++
++// The editor talks to the desktop app through window.api (app/preload.js). In a browser, this
++// object takes its place: the same actions, for one project stored on the server.
++export function serverEditorApi(projectId: string) {
++  const actions: Record<string, (data: any) => unknown> = {
++    "load-project": () => request(`/api/editor_project?projectid=${projectId}`),
++    "save-project": async (project) => {
++      await request(
++        "/api/editor_project",
++        postJson({ projectid: projectId, project })
++      );
++      return true;
++    },
++    "load-settings": () => ({
++      generalSettings: {},
++      path: `${location.origin}/proj_pub/${projectId}`,
++    }),
++    // General settings are empty (common/project/types.ts); the dashboard keeps the LLM settings.
++    "save-settings": () => undefined,
++    // The desktop app does nothing with this either: the simulator reads data through window.api.
++    "load-project-db": () => undefined,
++    // The file stays on the server: the saved project, and a running chat, may still use it.
++    "do-delete-avatar": () => undefined,
++    "load-excel": async () => {
++      const file = await pickFile(".xlsx");
++      return file === null ? null : await readSheet(file);
++    },
++    "load-avatar": async () => {
++      const file = await pickFile(".png,.jpg,.jpeg,.svg");
++      if (file === null) {
++        return null;
++      }
++      const form = new FormData();
++      form.append("projectid", projectId);
++      form.append("file", file); // last: the server reads the fields that come before the file
++      const reply = await request("/api/editor_avatar", {
++        method: "POST",
++        body: form,
++      });
++      return reply.filename;
++    },
++  };
++
++  // Every other channel is a data-table action; the server refuses names it doesn't know.
++  async function invoke(channel: string, data?: any) {
++    if (Object.hasOwn(actions, channel)) {
++      return await actions[channel](data);
++    }
++    const reply = await request(
++      "/api/editor_variables",
++      postJson({ projectid: projectId, channel, data })
++    );
++    return reply.result;
++  }
++
++  return { invoke, send: invoke };
++}
++
++function postJson(body: object): RequestInit {
++  return {
++    method: "POST",
++    headers: { "Content-Type": "application/json" },
++    body: JSON.stringify(body),
++  };
++}
++
++// Tilbot's server refuses a request with status 200 and a short code, such as NOT_LOGGED_IN.
++// The extra header tells the server the request comes from the editor (see ownProject there).
++async function request(url: string, init: RequestInit = {}): Promise<any> {
++  const response = await fetch(url, {
++    ...init,
++    headers: { ...init.headers, "X-Tilbot-Editor": "1" },
++  });
++  const isJson = response.headers
++    .get("Content-Type")
++    ?.startsWith("application/json");
++  const body = isJson ? await response.json() : await response.text();
++  if (!response.ok || !(isJson || body === "OK")) {
++    const message =
++      `The Tilbot server refused this (${body || response.status}). ` +
++      "Your changes are still in this tab. If you were logged out, log in again in another tab and retry.";
++    alert(message);
++    throw new Error(message);
++  }
++  return body;
++}
++
++// The chosen file, or null when the dialog is closed without one, as in the desktop app.
++function pickFile(accept: string): Promise<File | null> {
++  const input = Object.assign(document.createElement("input"), {
++    type: "file",
++    accept,
++  });
++  return new Promise((resolve) => {
++    input.addEventListener("change", () => resolve(input.files?.[0] ?? null));
++    input.addEventListener("cancel", () => resolve(null));
++    input.click();
++  });
++}
+diff --git a/frontend/src/routes/+page.svelte b/frontend/src/routes/+page.svelte
+index d91ea8f..79c9d88 100644
+--- a/frontend/src/routes/+page.svelte
++++ b/frontend/src/routes/+page.svelte
+@@ -106,7 +106,10 @@
+       // To prevent this error: https://svelte.dev/docs/svelte/compiler-warnings#state_referenced_locally
+       messages.length = 0;
+       if (data.path) {
+-        runtimeContext.path = `file:///${data.path.replace(/\\/g, "/")}`;
++        // The desktop app sends a folder on disk; the editor in a browser sends a web address.
++        runtimeContext.path = data.path.startsWith("http")
++          ? data.path
++          : `file:///${data.path.replace(/\\/g, "/")}`;
+       }
+       chatLookup = new ChatLookup();
+       const nonLogger = new NonLogger();
+diff --git a/frontend/src/routes/dashboard/+page.svelte b/frontend/src/routes/dashboard/+page.svelte
+index e20b2e0..9229334 100644
+--- a/frontend/src/routes/dashboard/+page.svelte
++++ b/frontend/src/routes/dashboard/+page.svelte
+@@ -3,10 +3,12 @@
+   import {
+     ArrowDownTray,
+     ArrowLeftEndOnRectangle,
++    ArrowUpTray,
+     CheckCircle,
+     Cog6Tooth,
+     DocumentArrowDown,
+     GlobeAlt,
++    PencilSquare,
+     User,
+     Users,
+     RocketLaunch,
+@@ -538,10 +540,11 @@
+                   <th class="text-center">View</th>
+                   <th class="text-center">Running</th>
+                   <th class="text-center">Import</th>
++                  <th class="text-center">Export</th>
+                   <th class="text-center">Logging enabled?</th>
+                   <th class="text-center">Download logs</th>
+                   <th class="text-center">Delete logs</th>
+-                  <!--<th>Edit</th>-->
++                  <th class="text-center">Edit</th>
+                   <th class="text-center">Delete</th>
+                 </tr>
+               </thead>
+@@ -583,6 +586,11 @@
+                         class="w-6 h-6 inline-block cursor-pointer"
+                       />
+                     </td>
++                    <td class="text-center">
++                      <a href="/api/export_project?projectid={p.id}" aria-label="Export">
++                        <ArrowUpTray class="w-6 h-6 inline-block" />
++                      </a>
++                    </td>
+                     <td class="text-center">
+                       <input type="checkbox" class="toggle" bind:checked={p.logging_enabled} onclick={saveLogging(p.id)} />
+                     </td>
+@@ -602,13 +610,11 @@
+                         class="w-6 h-6 inline-block cursor-pointer"
+                       />
+                     </td>
+-                    <!-- <td>
+-                            <a href="/editor?project={p.id}">
+-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
+-                                    <path d="M21.731 2.269a2.625 2.625 0 00-3.712 0l-1.157 1.157 3.712 3.712 1.157-1.157a2.625 2.625 0 000-3.712zM19.513 8.199l-3.712-3.712-12.15 12.15a5.25 5.25 0 00-1.32 2.214l-.8 2.685a.75.75 0 00.933.933l2.685-.8a5.25 5.25 0 002.214-1.32L19.513 8.2z" />
+-                                </svg>
+-                            </a>
+-                        </td> -->
++                    <td class="text-center">
++                      <a href="/editor?project={p.id}" aria-label="Edit">
++                        <PencilSquare class="w-6 h-6 inline-block" />
++                      </a>
++                    </td>
+                     <td class="text-center">
+                       <Trash
+                         onclick={setProjectInactive}
+diff --git a/frontend/src/routes/editor/+page.svelte b/frontend/src/routes/editor/+page.svelte
+index 4cb08f7..8e0c111 100644
+--- a/frontend/src/routes/editor/+page.svelte
++++ b/frontend/src/routes/editor/+page.svelte
+@@ -1,6 +1,7 @@
+ <script lang="ts">
+   import _ from "lodash";
+   import { onMount, type Component } from "svelte";
++  import { browser } from "$app/environment";
+   import type {
+     Project,
+     ProjectBlock,
+@@ -12,6 +13,7 @@
+   } from "../../../../common/project/types";
+   import { defaultProject } from "../../../../common/project/types";
+   import { setOrDelete, testConnection } from "$lib/utils/functions";
++  import { serverEditorApi } from "$lib/utils/serverEditorApi";
+   import Variables from "./variables.svelte";
+   import Settings from "./settings.svelte";
+   import Draggable from "./draggable.svelte";
+@@ -112,6 +114,15 @@
+ 
+   let windowAPI: any;
+ 
++  // Outside the desktop app, the editor works on a project stored on the server: /editor?project=<id>.
++  // Set here, before the child components read window.api when they mount.
++  const serverProjectId = browser
++    ? new URLSearchParams(location.search).get("project")
++    : null;
++  if (serverProjectId !== null) {
++    (window as any).api = serverEditorApi(serverProjectId);
++  }
++
+   onMount(() => {
+     windowAPI = (window as any)?.api;
+ 
+@@ -143,8 +154,21 @@
+           console.log(`Error loading settings: ${e}`);
+         }
+       })();
++    } else if (serverProjectId !== null) {
++      simulator!.src = "/";
++
++      (async () => {
++        try {
++          loadProject(await windowAPI.invoke("load-project"));
++        } catch {
++          // Saving the empty editor would overwrite the stored project, so leave instead.
++          window.location.href = "/dashboard/";
++          return;
++        }
++        ({ generalSettings, path } = await windowAPI.invoke("load-settings"));
++      })();
+     } else {
+-      // For now, since editor online is not yet working, we send the user back to the dashboard.
++      // Without a project to edit, go back to the dashboard to choose one.
+       window.location.href = "/dashboard/";
+     }
+ 
+@@ -874,7 +898,9 @@
+ 
+       <li>&nbsp;<br /><br /></li>
+ 
+-      {@render menuItem("Load project", Folder, loadButtonClicked)}
++      {#if isElectron}
++        {@render menuItem("Load project", Folder, loadButtonClicked)}
++      {/if}
+       {@render menuItem("Save project", FolderArrowDown, saveButtonClicked)}
+     </ul>
+   </div>
+diff --git a/yarn.lock b/yarn.lock
+index 9df6628..2472130 100644
+--- a/yarn.lock
++++ b/yarn.lock
+@@ -5456,6 +5456,7 @@ __metadata:
+     del-cli: "npm:^5.1.0"
+     lodash: "npm:^4.17.21"
+     postcss: "npm:^8.5.4"
++    read-excel-file: "npm:^8.0.3"
+     svelte: "npm:5.33.13"
+     svelte-check: "npm:^4.2.1"
+     svelte-heros-v2: "npm:^2.0.1"

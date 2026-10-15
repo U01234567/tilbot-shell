@@ -41,15 +41,22 @@ You need Docker (Docker Desktop on Windows or macOS) and Python 3.11 or newer.
 
 ## Putting the Tilbot project online
 
-The flowchart is made in Tilbot's desktop editor and saved as one `.tilbot` file in `/project/tilbot/`.
+The flowchart is made in Tilbot's editor, in the browser, and stored on the Tilbot server.
 
 1. **Log in to the dashboard** at http://127.0.0.1:8081/login. The first visit creates `admin` / `admin`; change that password at once.
 2. **Create a researcher account.** As `admin`, create a user, then log in as that user. Only users can own projects; the admin account can't.
-3. **Upload the flowchart.** Create a project, import the `.tilbot` file with the import icon, and switch it to running.
-4. **Connect it to the shell.** The globe icon opens `/?project=<id>`. Copy that id into `[tilbot] project_id` in `/project/project.toml`, then restart the shell.
-5. **Test it.** Sign up at https://localhost and check that the chat appears.
+3. **Create a project** with "+ New project".
+4. **Draw the flowchart.** The pencil icon opens the editor. Save with the save icon in the editor's menu; "Project saved!" confirms it. How to build the questionnaire is in [architecture.md](architecture.md#phase-1-in-tilbots-editor).
+5. **Switch it to running** in the dashboard.
+6. **Connect it to the shell.** The globe icon opens `/?project=<id>`. Copy that id into `[tilbot] project_id` in `/project/project.toml`, then restart the shell.
+7. **Test it.** Sign up at https://localhost and check that the chat appears.
+8. **Back it up.** The up-arrow icon downloads the project as one `.tilbot` file; keep it in `/project/tilbot/`. Tilbot keeps its projects in a Docker volume, which `down -v` deletes. To move a project to another computer or a server, import that file there.
 
-Leave Tilbot's own "Logging enabled" switch off: transcripts already go to the shell.
+Good to know:
+
+- **Saving changes the running chat** for every new conversation. Data tables and avatars are stored the moment you add them. While a study runs, work on a copy: a new project with the exported file imported into it.
+- **The editor has no "Load project" button in the browser.** Use Import in the dashboard.
+- **Leave "Logging enabled" off**, in the dashboard and in the editor's settings: transcripts already go to the shell, encrypted.
 
 ## Keys
 

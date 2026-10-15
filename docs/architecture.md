@@ -14,7 +14,7 @@ How the parts fit together, where everything lives, and the contract between the
                               │             │
                               ▼             ▼
    Postgres ◀── shell (Django)          Tilbot frontend ──ws──▶ Tilbot backend ──▶ Mongo
-  (encrypted)        ▲                                        (+ patches 0001, 0002)
+  (encrypted)        ▲                                        (+ our patches)
                      │                                                │
                      └──────── /bridge/save, /bridge/log ─────────────┘
                                    (inside the Docker network)
@@ -83,7 +83,9 @@ The shell replies with `{"intent": "saved"}` or `{"intent": "high"}`, but only a
 | `event` | `message_bot`, `message_user`, `session_end`, … |
 | `detail` | the message text, stored encrypted |
 
-## Phase 1 in Tilbot's studio
+## Phase 1 in Tilbot's editor
+
+Open the editor from Tilbot's dashboard, with the pencil icon next to the project.
 
 **Once per project:** under Settings, open External processing and add a link:
 
@@ -98,13 +100,13 @@ The shell replies with `{"intent": "saved"}` or `{"intent": "high"}`, but only a
 2. **A Processing block "save Q01".** It uses the external link `shell-save`, with parameters `item` = `Q01` and `bridge_secret` = the value from `.env`. Its connectors:
    - `saved` → the next question
    - `high` → this item's follow-up blocks, which end at the next question
-   - *else* → a block "Er ging iets mis, we vragen het nog een keer", which leads back to the question
+   - *else* → a block "Something went wrong, let's try that again", which leads back to the question
 
 Tilbot follows *else* when a call fails, so a failed save can never move on silently.
 
 Labels match on "contains", so `saved` and `high` must never be part of another label on the same block.
 
-The save calls only work in a chat opened from the shell's chat page, because only that page gives Tilbot a participant token. In the Electron simulator every save goes to *else*.
+The save calls only work in a chat opened from the shell's chat page, because only that page gives Tilbot a participant token. In the editor's simulator every save goes to *else*. For the same reason the dot on Settings turns red: the editor can't reach the shell, which is expected.
 
 ## The Caddyfile, line by line
 

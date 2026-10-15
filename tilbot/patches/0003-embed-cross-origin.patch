@@ -1,0 +1,36 @@
+diff --git a/frontend/src/routes/+page.ts b/frontend/src/routes/+page.ts
+index 602828e..2c07b37 100644
+--- a/frontend/src/routes/+page.ts
++++ b/frontend/src/routes/+page.ts
+@@ -4,8 +4,19 @@ import type { RuntimeContext } from "$lib/types/RuntimeContext";
+ import { defaultProjectSettings } from "../../../common/project/types";
+ import _ from "lodash";
+ 
++// Inside Tilbot's own editor, the chat runs in a frame on the same site and reads a flag from it.
++// Embedded by another site, reading that site's window throws, so the chat is not in the editor.
++function inTilbotEditor(): boolean {
++  try {
++    return browser && window.parent.isTilbotEditor === true;
++  } catch {
++    return false;
++  }
++}
++
+ export const load: PageLoad = ({ url, fetch }) => {
+-  const showHeaderParam = (!browser || window.parent.isTilbotEditor)?"1":url.searchParams.get("show_header") || "1";
++  const editor = inTilbotEditor();
++  const showHeaderParam = (!browser || editor)?"1":url.searchParams.get("show_header") || "1";
+ 
+   const runtimeContext: RuntimeContext = {
+     path: "",
+@@ -13,8 +24,8 @@ export const load: PageLoad = ({ url, fetch }) => {
+     isTilbotEditor: false,
+     // As showHeader is not altered in the application, we do not consider it a state
+     showHeader: showHeaderParam === "1",
+-    participantId: (!browser || window.parent.isTilbotEditor)?null:url.searchParams.get("pid") || null,
+-    projectId: (!browser || window.parent.isTilbotEditor)?null:url.searchParams.get("project") || null,
++    participantId: (!browser || editor)?null:url.searchParams.get("pid") || null,
++    projectId: (!browser || editor)?null:url.searchParams.get("project") || null,
+   };
+ 
+   let settings = _.cloneDeep(defaultProjectSettings);

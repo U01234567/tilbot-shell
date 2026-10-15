@@ -9,7 +9,7 @@ Participant data is never in this folder: it stays in the database.
 | `project.toml` | the study name, sign-up limits and options, the Tilbot project id | the research team changes a setting |
 | `questionnaire.toml` | per item: the answer scale and the threshold for follow-ups | the questionnaire changes |
 | `theme/tokens.css` | the study's colours | the look should change |
-| `tilbot/<name>.tilbot` | the flowchart, saved from Tilbot's studio | the conversation changes |
+| `tilbot/<name>.tilbot` | the flowchart, exported from Tilbot's dashboard as a backup | the conversation changes |
 | `knowledge.xlsx` | question–answer pairs with topics, example phrasings and optional links (phase 3, later) | the knowledge base changes |
 | `feedback/` | feedback templates per score band (phase 2, later) | the feedback changes |
 | this file | the study's own decisions (below) | one of them is taken |

@@ -8,7 +8,7 @@ The framework fixes the shape; the project folder fills it in.
 
 | Always there | What it does | Where |
 |---|---|---|
-| **Tilbot** | the chatbot: the conversation is drawn as a flowchart in its studio | built from a pinned commit with two small patches, `tilbot/` |
+| **Tilbot** | the chatbot: the conversation is drawn as a flowchart in its editor, in the browser | built from a pinned commit with a few small patches, `tilbot/` |
 | **vector-similarity-intent** | the interpreter: matches free text against the options the shell gives it | built from a pinned commit, `vector-similarity-intent/` |
 | **shell** (Django) | accounts, participant data, rules, feedback, the knowledge base, the dashboard | `shell/` |
 | **Participant database** | who signed up, their answers and transcripts, encrypted | Postgres |
@@ -17,7 +17,7 @@ The framework fixes the shape; the project folder fills it in.
 
 And three phases, always in this order:
 
-1. **Collect.** The bot asks the items of a questionnaire, written in Tilbot's studio. The shell stores each answer and, from thresholds in the project's settings, decides whether follow-up questions come next.
+1. **Collect.** The bot asks the items of a questionnaire, written in Tilbot's editor. The shell stores each answer and, from thresholds in the project's settings, decides whether follow-up questions come next.
 2. **Feedback.** The shell turns the answers into feedback: sentences, a narrative with placeholders, charts.
 3. **Questions.** The participant asks whatever they want. The shell matches the question to the knowledge base (topic first, then question) and answers, using the participant's own data where the answer calls for it.
 

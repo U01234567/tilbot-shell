@@ -1,4 +1,4 @@
-# Phase 1. The question texts live in Tilbot's studio; this file holds what the shell decides.
+# Phase 1. The question texts live in Tilbot's editor; this file holds what the shell decides.
 # Each Processing block "save" in Tilbot sends item = <id>. Every id used there must exist here.
 #
 # scale      the lowest and highest answer allowed; anything else makes Tilbot ask again

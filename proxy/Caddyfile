@@ -44,7 +44,7 @@
 	}
 }
 
-# Tilbot's researcher dashboard: import a .tilbot file, start and stop the project.
+# Tilbot's researcher dashboard: edit, import and export projects, start and stop them.
 # Plain HTTP on port 8081, published to 127.0.0.1 by compose.dev.yaml only.
 :8081 {
 	@backend path /api/* /ws/* /proj_pub/*

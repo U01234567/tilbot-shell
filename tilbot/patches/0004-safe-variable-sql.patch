@@ -1,0 +1,124 @@
+diff --git a/common/variabledb.ts b/common/variabledb.ts
+index 2da4d3c..d6702db 100644
+--- a/common/variabledb.ts
++++ b/common/variabledb.ts
+@@ -1,5 +1,11 @@
+ import { DatabaseSync } from "node:sqlite";
+ 
++// Table and column names come from researchers' spreadsheets, so they are quoted as identifiers;
++// values are always passed as parameters.
++function quoted(name: string): string {
++  return `"${String(name).replaceAll('"', '""')}"`;
++}
++
+ export class VariableDb {
+   private db: DatabaseSync;
+ 
+@@ -8,7 +14,7 @@ export class VariableDb {
+   }
+ 
+   public delete(tableName: string) {
+-    const q = `DROP TABLE IF EXISTS "${tableName}";`;
++    const q = `DROP TABLE IF EXISTS ${quoted(tableName)};`;
+     this.db.exec(q);
+   }
+ 
+@@ -16,8 +22,8 @@ export class VariableDb {
+     // Currently we just drop the old version and import the new one.
+     this.delete(tableName);
+ 
+-    let q = `CREATE TABLE "${tableName}" (`;
+-    let baseQ = `INSERT INTO "${tableName}" (`;
++    let q = `CREATE TABLE ${quoted(tableName)} (`;
++    let baseQ = `INSERT INTO ${quoted(tableName)} (`;
+     let valuesQ = `) VALUES (`;
+ 
+     // Create the table based on the first row.
+@@ -30,9 +36,9 @@ export class VariableDb {
+       }
+ 
+       q += `
+-                "${data[0][i]}" ${dataType}`;
++                ${quoted(data[0][i])} ${dataType}`;
+ 
+-      baseQ += `"${data[0][i]}"`;
++      baseQ += quoted(data[0][i]);
+       valuesQ += `?`;
+ 
+       if (i < data[0].length - 1) {
+@@ -58,7 +64,7 @@ export class VariableDb {
+ 
+   public getTable(tableName: string): any[][] {
+     try {
+-      const q = `SELECT * FROM "${tableName}";`;
++      const q = `SELECT * FROM ${quoted(tableName)};`;
+       const prep = this.db.prepare(q);
+       prep.setReturnArrays(true);
+ 
+@@ -79,7 +85,7 @@ export class VariableDb {
+ 
+   public getColNames(tableName: string): string[] {
+     try {
+-      const q = `SELECT * FROM "${tableName}";`;
++      const q = `SELECT * FROM ${quoted(tableName)};`;
+       const prep = this.db.prepare(q);
+       prep.setReturnArrays(true);
+ 
+@@ -102,18 +108,17 @@ export class VariableDb {
+     filterVal: string | null = null
+   ): any[] {
+     try {
+-      let q = `SELECT DISTINCT "${col}" FROM "${tableName}";`;
++      let q = `SELECT DISTINCT ${quoted(col)} FROM ${quoted(tableName)};`;
++      let params: string[] = [];
+ 
+       if (filterCol !== null && filterVal !== null) {
+-        q = `SELECT DISTINCT "${col}" FROM "${tableName}" WHERE "${filterCol}" = '${filterVal.replace(
+-          "'",
+-          "''"
+-        )}';`;
++        q = `SELECT DISTINCT ${quoted(col)} FROM ${quoted(tableName)} WHERE ${quoted(filterCol)} = ?;`;
++        params = [filterVal];
+       }
+       const prep = this.db.prepare(q);
+       prep.setReturnArrays(true);
+ 
+-      const res = prep.all();
++      const res = prep.all(...params);
+       return res;
+     } catch (e) {
+       return [];
+@@ -122,21 +127,13 @@ export class VariableDb {
+ 
+   public getCell(tableName: string, col: string, query: string): any {
+     try {
+-      const q = `SELECT "${col}" FROM "${tableName}" WHERE LOWER("${col}") LIKE '% ${query.replace(
+-        "'",
+-        "''"
+-      )} %' OR LOWER("${col}") LIKE '% ${query.replace(
+-        "'",
+-        "''"
+-      )}' OR LOWER("${col}") LIKE '${query.replace(
+-        "'",
+-        "''"
+-      )} %' OR LOWER("${col}") = '${query.replace("'", "''")}';`;
++      const lower = `LOWER(${quoted(col)})`;
++      const q = `SELECT ${quoted(col)} FROM ${quoted(tableName)} WHERE ${lower} LIKE ? OR ${lower} LIKE ? OR ${lower} LIKE ? OR ${lower} = ?;`;
+ 
+       const prep = this.db.prepare(q);
+       prep.setReturnArrays(true);
+ 
+-      const res = prep.all();
++      const res = prep.all(`% ${query} %`, `% ${query}`, `${query} %`, query);
+ 
+       if (res.length == 0) {
+         return null;
+@@ -150,7 +147,7 @@ export class VariableDb {
+ 
+   public getRandomRow(tableName: string): any {
+     try {
+-      const q = `SELECT * FROM "${tableName}" ORDER BY RANDOM() LIMIT 1;`;
++      const q = `SELECT * FROM ${quoted(tableName)} ORDER BY RANDOM() LIMIT 1;`;
+       const prep = this.db.prepare(q);
+       prep.setReturnArrays(true);
+ 

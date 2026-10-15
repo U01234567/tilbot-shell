@@ -10,10 +10,10 @@ When a big choice changes, rewrite its section here and say what changed and whe
 
 The study features (accounts, participant data, rules, feedback, a dashboard) live in a separate application, the shell. Tilbot runs next to it, almost unchanged.
 
-Tilbot is a general tool for anonymous research conversations, and its studio is where researchers draw a conversation. We want to keep both, and keep taking Tilbot's updates.
+Tilbot is a general tool for anonymous research conversations, and its editor is where researchers draw a conversation. We want to keep both, and keep taking Tilbot's updates.
 
 - **Build the features into Tilbot.** Participant data would end up in a tool designed to hold none, and our copy would drift too far from upstream to update.
-- **Write our own chatbot.** We would lose the studio and rebuild what already works.
+- **Write our own chatbot.** We would lose the editor and rebuild what already works.
 
 ## Patch files, not a fork
 
@@ -21,6 +21,13 @@ When Tilbot lacks something, we add a small patch in `tilbot/patches/`, applied 
 
 - **A fork.** Our changes would disappear into a long history, and every update would be a merge.
 - **A workaround in the shell.** Some things can only be done inside Tilbot. A workaround elsewhere would make our own code more complex than a ten-line patch.
+
+## Flowcharts are made in the browser
+
+Researchers draw the flowchart in Tilbot's editor, opened from the dashboard, and it is stored on our own Tilbot server. Upstream, that editor only works inside Tilbot's desktop app. Patch 0005 lets it run in the browser against the server, and is offered upstream. Patch 0004 makes Tilbot's data tables safe to reach over the network first.
+
+- **Tilbot's desktop app**, built by the Tilbot team or by us. That's a second program to install, kept at the same version as the server, for something the server can host. Building it ourselves would also mean an Electron build inside Docker that we can't test on every system.
+- **Writing the flowchart as a file by hand.** No visual editor, so not something researchers can work with.
 
 ## The shell is the hub
 
@@ -78,7 +85,7 @@ Caddy gets certificates by itself, including a local one for `localhost`, and it
 Every part runs in a container, started with one command on Windows, macOS, Linux or a server. `compose.dev.yaml` adds only what differs in development.
 
 - **Install everything by hand** (Node, Python, Postgres, MongoDB). It differs per machine and breaks easily, especially on Windows.
-- **One installer, like Tilbot's studio.** Six services that talk over a network don't fit in one `.exe`.
+- **One installer, like Tilbot's desktop editor.** Six services that talk over a network don't fit in one `.exe`.
 - **Kubernetes.** Far more than one study on one server needs.
 
 ## Pinned versions, patch updates only
@@ -103,9 +110,9 @@ TOML rather than a Python file, YAML or JSON:
 - it allows comments;
 - Python reads it without an extra package.
 
-## The questionnaire in Tilbot's studio, the rules in the shell
+## The questionnaire in Tilbot's editor, the rules in the shell
 
-Researchers write the questions where they see the conversation, in Tilbot's studio. After each answer, a save block sends it to the shell. The shell stores it and replies which way to go: next question, follow-ups, or ask again if saving failed. Thresholds live in the project folder.
+Researchers write the questions where they see the conversation, in Tilbot's editor. After each answer, a save block sends it to the shell. The shell stores it and replies which way to go: next question, follow-ups, or ask again if saving failed. Thresholds live in the project folder.
 
 - **The shell sends each question itself (a loop).** One source for questions, and a participant could resume halfway, but researchers lose the visual editor.
 - **Everything in Tilbot.** Tilbot would decide on follow-ups, and the shell would not know whether an answer was stored.
@@ -148,4 +155,6 @@ We use it unchanged and fork it only if matching falls short on a real knowledge
 - **IP addresses in `Attempt` are not cleaned up yet.** They need a retention period (see `ETHICS.md`).
 - **Only number answers** are supported in phase 1.
 - **No healthchecks** in the compose files yet.
-- **The patches were made against the code we received on 12 October 2026.** If they don't apply to the pinned commit, regenerate them.
+- **The patches were made against the code of 12 October 2026.** If they don't apply to a newer pinned commit, regenerate them.
+- **The chat token shows the participant's row number.** It is signed, so it can't be forged, but someone who inspects the chat's address sees roughly how many people signed up before them. A random id per participant would close this.
+- **Tilbot's dashboard is only reachable in development.** `compose.yaml` doesn't publish port 8081, so on a server researchers have no way in yet (an SSH tunnel is the likely answer).
