@@ -1,33 +1,40 @@
-/* The shell's own look. Colours and fonts are tokens; /project/theme/tokens.css overrides them. */
+/* The shell's own look: close to Tilbot's (purple accent, rounded, clean), on a light purple background,
+   so a page that belongs to the shell is recognisable at a glance. Colours and fonts are tokens;
+   project/theme/tokens.css overrides them on the participant pages, never on the researcher pages. */
 :root {
-  --brand: #2b4fb8;
+  --brand: #6c4199;   /* Tilbot's accent */
   --on-brand: #ffffff;
-  --ink: #1c2426;
-  --muted: #5a6668;
-  --paper: #f4f6f5;
+  --ink: #29173c;     /* Tilbot's dark purple */
+  --muted: #6e6280;
+  --paper: #f5edff;   /* Tilbot's lightest purple: the background of every page that is ours */
   --field: #ffffff;
-  --line: #d3dad9;
-  --error: #a1241b;
+  --line: #e3d5f5;
+  --error: #b0263a;
+  --radius: 1rem;
   --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--paper); color: var(--ink); font: 1rem/1.5 var(--font); }
+/* dvh: the height that stays visible on phones, whose address bar comes and goes */
+body { margin: 0; min-height: 100dvh; display: flex; flex-direction: column; background: var(--paper); color: var(--ink); font: 1rem/1.5 var(--font); }
 a { color: var(--brand); }
 
-.page { max-width: 28rem; margin: 0 auto; padding: 3rem 1rem; }
-h1 { font-size: 1.75rem; line-height: 1.2; margin: 0 0 1.5rem; }
+/* One white card in the middle; on a phone it fills the width, minus a margin. */
+.page { width: min(100% - 2rem, 30rem); margin: 2rem auto; padding: 2rem 1.5rem; background: var(--field); border: 1px solid var(--line); border-radius: var(--radius); }
+.researcher .page { width: min(100% - 2rem, 42rem); }
+h1 { font-size: 1.6rem; line-height: 1.2; margin: 0 0 1.25rem; }
 
 form { display: grid; gap: 1rem; margin-bottom: 1.5rem; }
-label { display: block; font-weight: 600; margin-bottom: .25rem; }
-input, select { width: 100%; padding: .6rem .7rem; font: inherit; border: 1px solid var(--line); border-radius: 4px; background: var(--field); }
+label { display: block; font-weight: 600; margin-bottom: .3rem; }
+/* 2.75rem: a comfortable touch target. 1rem text: phones don't zoom in on a field of at least 16px. */
+input, select { width: 100%; min-height: 2.75rem; padding: .55rem .75rem; font: inherit; color: inherit; border: 1px solid var(--line); border-radius: calc(var(--radius) / 2); background: var(--field); }
 input.code { font-size: 1.5rem; letter-spacing: .3em; font-weight: 700; }
 .hint { color: var(--muted); font-size: .9rem; margin: .4rem 0 0; }
-.notice { padding: .6rem .8rem; border-left: 3px solid var(--brand); background: var(--field); }
+.notice { padding: .6rem .8rem; border-left: 3px solid var(--brand); border-radius: 0 calc(var(--radius) / 2) calc(var(--radius) / 2) 0; background: var(--paper); }
 .errorlist { color: var(--error); list-style: none; padding: 0; margin: .25rem 0 0; }
 
-button, .button { display: inline-block; padding: .7rem 1.1rem; font: 600 1rem/1 var(--font); color: var(--on-brand); background: var(--brand); border: 0; border-radius: 4px; text-decoration: none; cursor: pointer; }
-.quiet { color: var(--brand); background: transparent; border: 1px solid var(--brand); }
+button, .button { display: inline-flex; align-items: center; min-height: 2.75rem; padding: .6rem 1.1rem; font: 600 1rem/1.2 var(--font); color: var(--on-brand); background: var(--brand); border: 1px solid var(--brand); border-radius: calc(var(--radius) / 2); text-decoration: none; cursor: pointer; }
+.quiet { color: var(--brand); background: transparent; }
 .actions { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; }
 .actions form { margin: 0; }
 :focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
@@ -36,10 +43,14 @@ button, .button { display: inline-block; padding: .7rem 1.1rem; font: 600 1rem/1
 .facts { border-collapse: collapse; margin-bottom: 1.5rem; }
 .facts th { text-align: left; padding: .4rem 1.5rem .4rem 0; color: var(--muted); font-weight: 600; }
 .facts td { padding: .4rem 0; }
-.choice { display: grid; gap: .5rem; justify-items: start; padding: 1rem; border: 1px solid var(--line); border-radius: 4px; background: var(--field); }
+.choice { display: grid; gap: .5rem; justify-items: start; padding: 1rem; border: 1px solid var(--line); border-radius: calc(var(--radius) / 2); background: var(--paper); }
 .choice p { margin: 0; color: var(--muted); font-size: .95rem; }
 
+/* The mark at the bottom that says: this page is the shell's (base.html decides where it shows). */
+.shell-mark { margin: auto auto 1rem; padding: .2rem .8rem; font-size: .8rem; color: var(--muted); background: var(--field); border: 1px solid var(--line); border-radius: 999px; }
+
 /* The chat page: Tilbot fills the screen, with a small sign-out button below. */
-.chat { height: 100vh; display: grid; grid-template-rows: 1fr auto; }
+.chat { flex: 1; min-height: 0; display: grid; grid-template-rows: 1fr auto; }
 .chat iframe { width: 100%; height: 100%; border: 0; }
-.chat form { margin: 0; padding: .5rem 1rem; justify-items: end; }
+.sign-out { margin: 0; justify-items: end; }
+.chat .sign-out { padding: .5rem 1rem; }

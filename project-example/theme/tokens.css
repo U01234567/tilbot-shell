@@ -1,4 +1,6 @@
-/* The study's colours and font. Loaded after the shell's defaults, so these win. */
+/* The study's colours and font on the participant pages. Loaded after the shell's defaults
+   (shell/static/css/shell.css), so these win. Any token there can be set here:
+   --brand, --on-brand, --ink, --muted, --paper, --field, --line, --error, --radius, --font. */
 :root {
   --brand: #6a2c9e;
   --on-brand: #ffffff;

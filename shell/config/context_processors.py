@@ -2,5 +2,5 @@ from django.conf import settings
 
 
 def study(request):
-    """Make the study settings available to every template as {{ study }}."""
-    return {"study": settings.STUDY}
+    """Give every template the study's settings, and what base.html needs for the shell's mark."""
+    return {"study": settings.STUDY, "shell_version": settings.SHELL_VERSION, "development": settings.DEBUG}

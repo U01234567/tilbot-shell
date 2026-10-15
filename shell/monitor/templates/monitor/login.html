@@ -1,10 +1,18 @@
-{% extends "base.html" %}
+{% extends "monitor/base.html" %}
 {% block title %}Researcher login · {{ study.name }}{% endblock %}
 {% block content %}
   <h1>Researcher login</h1>
   <form method="post">
     {% csrf_token %}
-    {{ form.as_div }}
+    {% if form.errors %}<p class="errorlist">Wrong name or password.</p>{% endif %}
+    <div>
+      <label for="name">Name</label>
+      <input id="name" name="username" autocomplete="username" required autofocus>
+    </div>
+    <div>
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required>
+    </div>
     <button type="submit">Log in</button>
   </form>
   <p class="hint">Accounts are made on the server: <code>python start_shell.py researcher</code>, one name and password for this dashboard and Tilbot's.</p>

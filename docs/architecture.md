@@ -25,6 +25,7 @@ How the parts fit together, where everything lives, and the contract between the
 - **The shell is the hub.** Tilbot only calls the shell, and only the shell will call the vector-similarity-intent service.
 - **Participants see two sites.** The shell at `SHELL_HOST` handles sign-up, sign-in and the chat page. Tilbot at `BOT_HOST` is only ever shown inside the shell's chat page, in an iframe.
 - **Tilbot's researcher dashboard is not public.** It sits on port 8081, which only `compose.dev.yaml` publishes, and only to `127.0.0.1`.
+- **The shell's pages look like Tilbot, on a light purple background.** That background and the white cards (`shell/static/css/shell.css`) mark every page the shell serves, and so controls and secures; what shows without it is Tilbot's (its dashboard, and the chat inside the iframe). The researcher pages always carry the mark `tilbot-shell <version> · researcher` and never take the study's colours. The participant pages take the study's colours from `project/theme/tokens.css`, and carry the mark `· development` only while `SHELL_ENV=development`: participants of a real study never see the software's name.
 
 ## Where everything goes
 

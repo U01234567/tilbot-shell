@@ -1,15 +1,17 @@
 {% load static %}<!doctype html>
-<html lang="{{ study.language }}">
+<html lang="{% block lang %}{{ study.language }}{% endblock %}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}{{ study.name }}{% endblock %}</title>
   <link rel="stylesheet" href="{% static 'css/shell.css' %}">
-  <link rel="stylesheet" href="{% static 'theme/tokens.css' %}">
+  {% block theme %}<link rel="stylesheet" href="{% static 'theme/tokens.css' %}">{% endblock %}
 </head>
-<body>
+<body class="{% block body_class %}{% endblock %}">
   <main class="{% block page_class %}page{% endblock %}">
     {% block content %}{% endblock %}
   </main>
+  {# Participants of a real study never see the software's name; while developing, every page of ours says so. #}
+  {% block mark %}{% if development %}<footer class="shell-mark">tilbot-shell {{ shell_version }} · development</footer>{% endif %}{% endblock %}
 </body>
 </html>
