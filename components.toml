@@ -17,8 +17,9 @@ patches = [
   "0003-embed-cross-origin",
   "0004-safe-variable-sql",
   "0005-browser-editor",
+  "0006-admin-password",
 ]
-note = "First pin, the newest commit on 12 Oct 2026. 0001 and 0002 were made against a zip of the same day, 0003 to 0005 against this commit."
+note = "First pin, the newest commit on 12 Oct 2026. 0001 and 0002 were made against a zip of the same day, 0003 to 0006 against this commit."
 
 [vector-similarity-intent]
 repo = "https://github.com/tilbotio/vector-similarity-intent"

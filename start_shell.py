@@ -22,7 +22,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 PINNED = ("tilbot", "vector-similarity-intent")
-SECRETS = ("DJANGO_SECRET_KEY", "BRIDGE_SECRET", "TILBOT_SESSION_SECRET", "POSTGRES_PASSWORD", "FIELD_ENCRYPTION_KEY")
+SECRETS = (
+    "DJANGO_SECRET_KEY", "BRIDGE_SECRET", "TILBOT_SESSION_SECRET", "TILBOT_ADMIN_PASSWORD",
+    "POSTGRES_PASSWORD", "FIELD_ENCRYPTION_KEY",
+)
 # A new value for these locks out what is already stored, so they are never replaced once a database exists.
 DATA_SECRETS = {"POSTGRES_PASSWORD", "FIELD_ENCRYPTION_KEY"}
 DATABASE_VOLUME = "tilbot-shell_db"  # the "db" volume of compose project "tilbot-shell"
@@ -76,7 +79,7 @@ def fresh_secret(name: str) -> str:
 
 
 def with_secrets(env_text: str) -> tuple[str, list[str]]:
-    """Return the .env text with every empty secret filled in, and the names of those secrets."""
+    """Return the .env text with every empty or missing secret filled in, and the names of those secrets."""
     lines, filled = [], []
     for line in env_text.splitlines():
         name, _, value = line.partition("=")
@@ -84,7 +87,10 @@ def with_secrets(env_text: str) -> tuple[str, list[str]]:
             line = f"{name}={fresh_secret(name)}"
             filled.append(name)
         lines.append(line)
-    return "\n".join(lines) + "\n", filled
+    present = {line.partition("=")[0] for line in lines}
+    missing = [name for name in SECRETS if name not in present]  # a .env from before a secret existed
+    lines += [f"{name}={fresh_secret(name)}" for name in missing]
+    return "\n".join(lines) + "\n", filled + missing
 
 
 def require_docker() -> None:

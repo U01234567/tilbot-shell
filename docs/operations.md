@@ -46,6 +46,7 @@ Every command runs from the repository root. `start_shell.py` picks the right co
 | A browser error inside the chat frame | Open https://bot.localhost once, or run `python start_shell.py trust` |
 | "No Tilbot project is linked yet" | Follow [your first chat](#your-first-chat-start-to-finish) |
 | "… is empty in .env, but the database was made with the old value" | Put the value back from your backup (see [Keys](#keys)) |
+| The dashboard refuses the admin password | It is `TILBOT_ADMIN_PASSWORD` in `.env`, unless someone changed it under "Your account". An admin made before that setting existed still has `admin`: log in with that and change it at once |
 
 ## Every day
 
@@ -65,7 +66,7 @@ Every command runs from the repository root. `start_shell.py` picks the right co
 
 The flowchart is made in Tilbot's editor, in the browser, and stored on the Tilbot server.
 
-1. **Log in to the dashboard** at http://127.0.0.1:8081/login. The first visit creates `admin` / `admin`; change that password at once.
+1. **Log in to the dashboard** at http://127.0.0.1:8081/login as `admin`, with the password from `TILBOT_ADMIN_PASSWORD` in `.env`. Tilbot creates that account on the first visit; there is no `admin`/`admin`. To change the password later: "Your account" in the dashboard. `.env` only holds the first one.
 2. **Create a researcher account.** As `admin`, create a user, then log in as that user. Only users can own projects; the admin account can't.
 3. **Create a project** with "+ New project".
 4. **Draw the flowchart.** The pencil icon opens the editor. Save with the save icon in the editor's menu; "Project saved!" confirms it. How to build the questionnaire is in [architecture.md](architecture.md#phase-1-in-tilbots-editor).
@@ -88,6 +89,11 @@ Good to know:
 - **Never change the key** once real data is stored. Changing it needs a re-encryption step that doesn't exist yet.
 - **Restoring a database backup also needs the key** that was in use when the backup was made.
 - **New secrets:** empty their values in `.env` and run `up`, which fills them in again. It refuses to replace `FIELD_ENCRYPTION_KEY` or `POSTGRES_PASSWORD` while a database exists, because the new value would lock out what is stored.
+- **Start over with all-new secrets,** for a test setup only, because it deletes every stored answer, account and Tilbot project:
+  ```
+  python start_shell.py down -v
+  ```
+  Then delete `.env` and run `python start_shell.py up` and `python start_shell.py trust`.
 
 ## Backups
 
