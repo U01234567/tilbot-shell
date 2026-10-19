@@ -62,6 +62,9 @@ Every command runs from the repository root. `start_shell.py` picks the right co
 | See what the shell is doing | `python start_shell.py logs -f shell` |
 | How many took part, export the data | http://127.0.0.1:8081/researcher/ (see [the researcher dashboard](#the-researcher-dashboard-and-the-data-export)) |
 | An account for someone, on both dashboards | `python start_shell.py researcher` |
+| Back up everything, encrypted and checked | `python start_shell.py backup` (see [Backups](#backups)) |
+| Take in new code, safely | `python start_shell.py update` (see [Updates](#updates)) |
+| A participant asks to be removed | the researcher dashboard, "Remove a participant" (see [Removing data](#removing-data)) |
 
 ## Developing
 
@@ -86,8 +89,8 @@ A study has two halves, linked by one id. **The project folder** (`project/`) ho
 4. **Draw the flowchart.** The pencil icon opens the editor. Each question gets a save block whose `item` matches an id in `questionnaire.toml`, the end opens the results, and then questions can follow; [architecture.md](architecture.md#phase-1-in-tilbots-editor) shows how. Save with the save icon; "Project saved!" confirms it. To start from a working example instead, click the project's icon in the Import column and pick `project-example/tilbot/example.tilbot`.
 5. **Link the two.** Switch the project to running in Tilbot's dashboard. The globe icon opens `/?project=<id>`: copy that id into `[tilbot] project_id` in `project/project.toml`, then `python start_shell.py restart shell`.
 6. **Test it.** Sign up at https://localhost: you should see the bot's first message inside the page. Answer the questions: at the end the results open beside the chat (over it on a phone). With a knowledge base, type a question from it in your own words: you should get its answer. Right after `up`, the first questions may fail with "something went wrong" while the language model downloads; `python start_shell.py logs vector-similarity-intent` shows when it is ready. Then open the [researcher dashboard](#the-researcher-dashboard-and-the-data-export): you should see one participant more, and their answers.
-7. **Run the study.** Participants sign up and chat; you follow the counts in the researcher dashboard and export at the end.
-8. **Back up the conversation.** In Tilbot's dashboard, the up-arrow icon downloads the project as one `.tilbot` file; keep it in `project/tilbot/`. Tilbot keeps its projects in a Docker volume, which `down -v` deletes. To move a project to another computer or a server, import that file there.
+7. **Run the study.** Make a backup first (`python start_shell.py backup`), and regularly while it runs. Participants sign up and chat; you follow the counts in the researcher dashboard and export at the end.
+8. **Keep the conversation as a file too.** A backup holds the flowchart, but to move it to another computer or a server, the up-arrow icon in Tilbot's dashboard downloads the project as one `.tilbot` file; keep it in `project/tilbot/` and import it there.
 
 Good to know:
 
@@ -107,6 +110,16 @@ The shell's own dashboard shows how the study is going and hands out the data: h
 
 Both give one zip with `participants.csv`, `answers.csv`, `scores.csv` (each scale of the results, from the latest answers, as the participant saw it), `questions.csv` (each question asked and the knowledge base entry it matched; its text only when transcripts are kept) and `transcripts.csv`, decrypted, with times in the study's time zone. **The export is the one place where data leaves the database unencrypted:** store it where the study's data management plan says, never in the repository folder (`.gitignore` skips zips as a safety net).
 
+## Removing data
+
+Deleting study data is never automatic: it is always a researcher's decision, with what the study's data management plan says.
+
+- **One participant asks to be removed:** in the researcher dashboard, "Remove a participant". Enter their code: the page shows what will be deleted (answers, questions, transcript lines), and deletes it all, with their sign-in sessions, once you confirm.
+- **The study is over:** after the final export and backup, `python start_shell.py erase` deletes every participant with all their data, the sign-in attempts and all sessions. It asks for the study's name as written in `project.toml`. Researcher accounts and Tilbot's projects stay.
+- **Backups made before still hold the data.** Delete or keep them as the data management plan says.
+
+Some data goes by itself: sign-in attempts after 15 minutes, expired sign-in sessions at every start of the shell and every backup, and container logs beyond 3 files of 10 MB per service.
+
 ## On a server
 
 Not described yet. `compose.yaml` is written for it (`SHELL_ENV=production`, a real `SHELL_HOST` and `BOT_HOST`, ports 80 and 443 open so Caddy can get certificates), but it has not been done once, and Tilbot's dashboard is not reachable there (known gap). The first deployment will write this section.
@@ -117,7 +130,7 @@ Not described yet. `compose.yaml` is written for it (`SHELL_ENV=production`, a r
 
 - **Keep two copies outside this computer,** for example in two password managers held by two people.
 - **Never change the key** once real data is stored. Changing it needs a re-encryption step that doesn't exist yet.
-- **Restoring a database backup also needs the key** that was in use when the backup was made.
+- **Every backup is encrypted with this key,** so restoring one needs the key that was in use when it was made.
 - **New secrets:** empty their values in `.env` and run `up`, which fills them in again. It refuses to replace `FIELD_ENCRYPTION_KEY` or `POSTGRES_PASSWORD` while a database exists, because the new value would lock out what is stored.
 - **Start over with all-new secrets,** for a test setup only, because it deletes every stored answer, account and Tilbot project:
   ```
@@ -127,23 +140,31 @@ Not described yet. `compose.yaml` is written for it (`SHELL_ENV=production`, a r
 
 ## Backups
 
-The dump is written inside the database container and then copied out, so no terminal can change its bytes on the way. Keep backups outside the repository folder; `.gitignore` skips `*.dump` files as a safety net.
-
-**Make one:**
 ```
-python start_shell.py exec db pg_dump -U shell -Fc -f /tmp/backup.dump shell
-python start_shell.py cp db:/tmp/backup.dump backup-2026-10-15.dump
+python start_shell.py backup
 ```
 
-**Test it.** A backup only counts once a restore has worked. This copies the saved file back in and restores it into a scratch database:
-```
-python start_shell.py cp backup-2026-10-15.dump db:/tmp/restore.dump
-python start_shell.py exec db createdb -U shell restore_test
-python start_shell.py exec db pg_restore -U shell -d restore_test /tmp/restore.dump
-python start_shell.py exec db dropdb -U shell restore_test
-```
+This makes one folder in `backups/`, named after the date and time, with the whole study in it:
 
-Automating this, and a backup before every update, is still to be built.
+| File | Holds |
+|---|---|
+| `shell.dump.enc` | the shell's database: participants, answers, questions, transcripts, researcher accounts |
+| `tilbot.archive.enc` | Tilbot's database: its accounts, projects and flowcharts |
+| `tilbot-files.tar.gz.enc` | Tilbot's files: data tables and avatars |
+| `project.zip.enc` | the project folder |
+| `README.txt` | what the folder holds, and how to restore it |
+
+You should see "Checked: the database restores (… participants)" and "Backup made". Before saying so, `backup` restores the database into a scratch database and reads every other part back: a backup only counts once a restore has worked. If that check fails, the folder is renamed `…-FAILED`.
+
+- **Every file is encrypted with `FIELD_ENCRYPTION_KEY`,** so a backup can't be read without the key, and the key is never in the backup. The data goes from the containers through memory into the encrypted file; it is never written to disk unencrypted.
+- **Keep a copy elsewhere:** `backups/` is on the same computer as the study, and git skips it. To write straight to another place: `python start_shell.py backup D:\backups\2026-10-19`.
+- **Make one** before an update (`update` does it for you), before the study starts, and regularly while it runs. Automatic backups on a schedule come with running on a server.
+
+**Restore one:**
+```
+python start_shell.py restore backups/2026-10-19-143000
+```
+It asks you to type the backup's name, checks the backup, and only then replaces the shell's database, Tilbot's database and files, and `project/`. Your `project/` from before is kept beside it, as `project-before-restore-<date>`. The key in `.env` must be the one the backup was made with.
 
 ## Updates
 
@@ -151,11 +172,12 @@ Automating this, and a backup before every update, is still to be built.
 python start_shell.py updates
 ```
 
-This compares each pinned commit with upstream and changes nothing. To move to a newer commit:
+This compares each pinned commit with upstream and changes nothing. To take in new code, from `git pull` or a newer commit in `components.toml` (change `commit`, `pinned_on` and `note` there):
 
-1. Make a backup.
-2. Change `commit`, `pinned_on` and `note` in `components.toml`.
-3. Run `python start_shell.py up`. If a patch no longer applies, the build stops there; regenerate the patch against the new commit.
-4. Run the tests.
+```
+python start_shell.py update
+```
+
+It makes a backup, rebuilds everything and, in development, runs the tests. If something fails, it stops and says which backup takes you back: return to the code you had (`git log` shows it), then `restore` that backup. If a Tilbot patch no longer applies, the build stops; regenerate the patch against the new commit.
 
 Python packages take patch updates only: run `python start_shell.py lock` and rebuild. A minor or major upgrade (Django 5.2 to 6.x, say) is a decision: write it in `docs/decisions.md` first.

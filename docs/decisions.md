@@ -198,9 +198,26 @@ Participants' questions are matched to `project/knowledge.xlsx`, one question pe
 - **Links in the panel beside the chat, or as plain text.** The panel keeps everything ours but covers the chat on a phone after each answer; plain text makes participants copy addresses. The patch is about 15 lines and builds no HTML from the message.
 - **No separate questions table.** The transcripts hold the questions, but not what they were matched to.
 
-## Known gaps in version 0.9
+## Backups hold the whole study, encrypted with the field key, and are checked
 
-- **Not built yet:** status and logs in the researcher dashboard, a chat page in the study's own look, backups and the update flow in `start_shell.py`, and running on a server.
+`python start_shell.py backup` saves the shell's database, Tilbot's database and files, and `project/` in one folder, each file encrypted with `FIELD_ENCRYPTION_KEY`, and restores the database once into a scratch database before calling it a backup. `restore` checks a backup before it replaces anything, and keeps the old `project/` aside. `update` is a backup, a rebuild and the tests, stopping at the first failure.
+
+- **The shell's database only.** Smaller, but a restore would give participants without their flowchart.
+- **Unencrypted, kept somewhere safe.** Answers and transcripts are encrypted inside the dump already, but codes, ages, genders, password hashes and flowcharts are not, and one careless copy would expose them.
+- **A separate backup password.** One more secret to lose; the field key is needed to read the answers anyway, so it adds no protection.
+- **A button in the researcher dashboard.** The shell's container would need access to Docker and to the database tools of every service: a door we keep shut.
+
+## Deleting data is a researcher's decision
+
+One participant is removed from the researcher dashboard (code, then what will be deleted, then a confirmation); a whole study with `python start_shell.py erase`, which asks for the study's name. Only technical leftovers go by themselves: sign-in attempts after 15 minutes, expired sessions at every start of the shell and every backup, and container logs beyond 3 × 10 MB per service.
+
+- **Automatic deletion after a number of days in `project.toml`.** Hands-off, but one wrong number deletes research data before anyone analysed it.
+- **Removal by command only.** Researchers asked for screens over commands; one participant's request is an everyday task.
+
+## Known gaps in version 0.10
+
+- **Not built yet:** status and logs in the researcher dashboard, a chat page in the study's own look, backups on a schedule, and running on a server.
+- **Backup and restore were tested against a real Postgres, with Docker simulated.** The Mongo and Tilbot-file steps were not run against the real containers before release: check `backup` and `restore` once on a test setup.
 - **Matching is tested with a stand-in, not the real model.** The language model is too large for the automated tests; check the matching on the real knowledge base before a study starts, and add phrasings where it misses.
 - **No limit on how many questions a participant asks.** Each question costs the matching service a moment of work; a participant who sends hundreds slows it for others.
 - **The answer to a question can't use the participant's own data** ("your pain score is …") yet.

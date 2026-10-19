@@ -4,7 +4,13 @@
 # Only Caddy publishes ports; everything else is reachable inside the Docker network only.
 name: tilbot-shell
 
+# Container logs can hold an answer the shell refused, so each service keeps at most 3 files of 10 MB.
+x-logging: &logging
+  driver: json-file
+  options: { max-size: "10m", max-file: "3" }
+
 x-tilbot: &tilbot
+  logging: *logging
   image: tilbot-shell/tilbot:${TILBOT_COMMIT:?start with python start_shell.py}
   build:
     context: ./tilbot
@@ -15,6 +21,7 @@ x-tilbot: &tilbot
 
 services:
   caddy:
+    logging: *logging
     image: caddy:2.10
     restart: unless-stopped
     ports:
@@ -31,6 +38,7 @@ services:
       - caddy-ca:/data/caddy/pki   # the local certificate authority, kept apart (see below)
 
   shell:
+    logging: *logging
     build: ./shell
     restart: unless-stopped
     environment:
@@ -52,6 +60,7 @@ services:
       db: { condition: service_healthy }
 
   db:
+    logging: *logging
     image: postgres:17
     restart: unless-stopped
     healthcheck:
@@ -88,6 +97,7 @@ services:
     depends_on: [mongo]
 
   mongo:
+    logging: *logging
     image: mongo:8.3   # the version in Tilbot's own compose file
     restart: unless-stopped
     volumes:
@@ -96,6 +106,7 @@ services:
   # Intent recognition for phase 3. start_shell.py turns on the profile only when project/knowledge.xlsx
   # exists, so a study without questions doesn't download the language model.
   vector-similarity-intent:
+    logging: *logging
     profiles: [phase3]
     build:
       context: ./vector-similarity-intent

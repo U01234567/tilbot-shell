@@ -3,7 +3,13 @@
     python start_shell.py up         create .env and project/ if needed, then build and start everything
     python start_shell.py trust      make this computer trust https://localhost and https://bot.localhost
     python start_shell.py researcher one name and password for both dashboards on http://127.0.0.1:8081
+    python start_shell.py backup [folder]
+                                     an encrypted backup of the whole study, checked by restoring it
+    python start_shell.py restore <folder>
+                                     replace the study's data, Tilbot's projects and project/ with a backup
     python start_shell.py updates    compare the pinned commits in components.toml with upstream
+    python start_shell.py update     after new code or a new pin: a backup, then rebuild, then the tests
+    python start_shell.py erase      delete every participant's data, at the end of a study
     python start_shell.py lock       regenerate shell/requirements.lock (exact versions with hashes)
     python start_shell.py <anything else>
                                      passed to `docker compose` with the right files and pins,
@@ -11,14 +17,17 @@
 """
 
 import base64
+import io
 import os
 import platform
 import secrets
 import shutil
 import subprocess
 import sys
+import tarfile
 import time
 import tomllib
+import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -33,6 +42,20 @@ DATABASE_VOLUME = "tilbot-shell_db"  # the "db" volume of compose project "tilbo
 CA_VOLUME = "tilbot-shell-caddy-ca"  # external in compose.yaml, so `down -v` keeps it
 # A study with a knowledge base answers questions (phase 3): only then does vector-similarity-intent run.
 KNOWLEDGE = ROOT / "project" / "knowledge.xlsx"
+# Backups: one folder each, every file encrypted with FIELD_ENCRYPTION_KEY (shell's backup_cipher).
+BACKUPS = ROOT / "backups"  # the default place, kept out of git; copy backups elsewhere too
+BACKUP_FILES = ("shell.dump", "tilbot.archive", "tilbot-files.tar.gz", "project.zip")
+RESTORE_CHECK = "restore_check"  # a scratch database: every backup is restored into it once, then dropped
+BACKUP_README = """A backup of the study "{study}", made {when}. It restored completely when it was made.
+
+shell.dump.enc           the shell's database: participants, answers, questions, transcripts, researcher accounts
+tilbot.archive.enc       Tilbot's database: its accounts, projects and flowcharts
+tilbot-files.tar.gz.enc  Tilbot's files: data tables and avatars
+project.zip.enc          the project folder
+
+Every file is encrypted with FIELD_ENCRYPTION_KEY from .env. That key is not in this folder: keep it apart.
+To restore: python start_shell.py restore <this folder>
+"""
 STARTUP_SECONDS = 15  # long enough for a service that fails at start-up to have stopped or restarted
 
 # Where start_shell.py can't trust a certificate without your password, it shows the command instead.
@@ -132,16 +155,33 @@ def ensure_env() -> None:
         print("Back up FIELD_ENCRYPTION_KEY from .env now, apart from the database: without it, stored answers can't be read.")
 
 
-def compose(*args: str, capture: bool = False) -> str:
-    require_docker()
+def compose_command(*args: str) -> tuple[list[str], dict[str, str]]:
+    """The docker compose command line, and its environment with the pinned commits."""
     profiles = ["--profile", "phase3"] if KNOWLEDGE.exists() else []
     command = ["docker", "compose", *compose_files(shell_env()), *profiles, *args]
-    env = {**os.environ, **pinned_env(read_components())}
+    return command, {**os.environ, **pinned_env(read_components())}
+
+
+def compose(*args: str, capture: bool = False) -> str:
+    require_docker()
+    command, env = compose_command(*args)
     result = subprocess.run(command, cwd=ROOT, env=env, check=True, capture_output=capture, text=True)
     return result.stdout
 
 
-def up() -> None:
+def compose_bytes(*args: str, data: bytes = b"") -> bytes:
+    """docker compose with bytes in and out. No terminal touches them, so a dump arrives byte for byte."""
+    require_docker()
+    command, env = compose_command(*args)
+    result = subprocess.run(command, cwd=ROOT, env=env, input=data, capture_output=True)
+    if result.returncode != 0:
+        sys.stderr.write(result.stderr.decode(errors="replace"))
+        raise subprocess.CalledProcessError(result.returncode, command)
+    return result.stdout
+
+
+def up() -> list[str]:
+    """Build and start everything; return the services that didn't stay up."""
     require_docker()  # before ensure_env, which asks Docker about the database
     ensure_env()
     if not (ROOT / "shell" / "requirements.lock").exists():
@@ -167,6 +207,7 @@ def up() -> None:
         print(f"Not running: {service}. See why with: python start_shell.py logs {service}")
     if not stopped:
         print("Everything is running. Open https://localhost (if the browser warns: python start_shell.py trust).")
+    return stopped
 
 
 def trust() -> None:
@@ -184,6 +225,139 @@ def trust() -> None:
 def researcher() -> None:
     """One name and password for both dashboards: ours and Tilbot's (shell/monitor/management/commands)."""
     compose("exec", "shell", "python", "manage.py", "researcher")
+
+
+def database() -> tuple[str, str]:
+    """The shell's database user and name, from .env."""
+    values = env_values((ROOT / ".env").read_text(encoding="utf-8"))
+    return values["POSTGRES_USER"], values["POSTGRES_DB"]
+
+
+def study_name() -> str:
+    return tomllib.loads((ROOT / "project" / "project.toml").read_text(encoding="utf-8"))["name"]
+
+
+def cipher(direction: str, data: bytes) -> bytes:
+    """Encrypt or decrypt with FIELD_ENCRYPTION_KEY, inside the shell's container (records/management/commands)."""
+    return compose_bytes("exec", "-T", "shell", "python", "manage.py", "backup_cipher", direction, data=data)
+
+
+def zip_folder(folder: Path) -> bytes:
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+        for path in sorted(folder.rglob("*")):
+            if path.is_file():
+                archive.write(path, path.relative_to(folder))
+    return buffer.getvalue()
+
+
+def take_backup() -> dict[str, bytes]:
+    """Every part of the study's state, as bytes in memory: nothing unencrypted is written to disk."""
+    user, name = database()
+    return {
+        "shell.dump": compose_bytes("exec", "-T", "db", "pg_dump", "-U", user, "-Fc", name),
+        "tilbot.archive": compose_bytes("exec", "-T", "mongo", "mongodump", "--db", "tilbot", "--archive", "--gzip"),
+        "tilbot-files.tar.gz": compose_bytes("exec", "-T", "tilbot-backend", "tar", "-czf", "-", "projects", "proj_pub"),
+        "project.zip": zip_folder(ROOT / "project"),
+    }
+
+
+def read_backup(folder: Path) -> dict[str, bytes]:
+    return {file: cipher("decrypt", (folder / f"{file}.enc").read_bytes()) for file in BACKUP_FILES}
+
+
+def check_backup(parts: dict[str, bytes]) -> None:
+    """Restore every part somewhere harmless, so a backup that can't be restored is noticed now."""
+    user, _ = database()
+    db = ("exec", "-T", "db")
+    compose_bytes(*db, "dropdb", "-U", user, "--if-exists", RESTORE_CHECK)
+    compose_bytes(*db, "createdb", "-U", user, RESTORE_CHECK)
+    try:
+        compose_bytes(*db, "pg_restore", "-U", user, "--no-owner", "--exit-on-error", "-d", RESTORE_CHECK, data=parts["shell.dump"])
+        count = compose_bytes(*db, "psql", "-U", user, "-d", RESTORE_CHECK, "-tAc", "select count(*) from accounts_participant")
+    finally:
+        compose_bytes(*db, "dropdb", "-U", user, "--if-exists", RESTORE_CHECK)
+    compose_bytes("exec", "-T", "mongo", "mongorestore", "--archive", "--gzip", "--dryRun", data=parts["tilbot.archive"])
+    tarfile.open(fileobj=io.BytesIO(parts["tilbot-files.tar.gz"]), mode="r:gz").getnames()  # reads it to the end
+    if zipfile.ZipFile(io.BytesIO(parts["project.zip"])).testzip() is not None:
+        raise ValueError("project.zip in the backup is damaged")
+    print(f"Checked: the database restores ({int(count)} participants), and Tilbot's data and project/ can be read.")
+
+
+def backup(folder: str = "") -> Path:
+    """Make an encrypted backup of the whole study in a new folder, and check it by restoring it."""
+    target = Path(folder) if folder else BACKUPS / time.strftime("%Y-%m-%d-%H%M%S")
+    if target.exists():
+        raise ValueError(f"{target} exists already: give another folder")
+    compose("exec", "shell", "python", "manage.py", "clearsessions")  # expired sessions don't go into a backup
+    print("Making the backup...")
+    parts = take_backup()
+    target.mkdir(parents=True)
+    for file, data in parts.items():
+        (target / f"{file}.enc").write_bytes(cipher("encrypt", data))
+    try:
+        check_backup(read_backup(target))  # the files as written, decrypted again: the real test
+    except (subprocess.CalledProcessError, ValueError, tarfile.TarError, zipfile.BadZipFile):
+        failed = target.with_name(f"{target.name}-FAILED")
+        target.rename(failed)
+        print(f"This backup could not be restored, so it is renamed {failed.name}: don't rely on it.")
+        raise
+    (target / "README.txt").write_text(BACKUP_README.format(study=study_name(), when=time.strftime("%Y-%m-%d %H:%M")), encoding="utf-8")
+    print(f"Backup made: {target}. Keep a copy elsewhere too, and FIELD_ENCRYPTION_KEY apart from it.")
+    return target
+
+
+def restore(folder: str = "") -> None:
+    """Replace the study's data, Tilbot's accounts and projects, and project/ with a backup."""
+    if not folder:
+        raise ValueError("say which backup: python start_shell.py restore backups/<its name>")
+    source = Path(folder)
+    print(f"This replaces every participant's data, Tilbot's accounts and projects, and project/ with the backup {source.name}.")
+    print("project/ as it is now is kept beside it, as project-before-restore-<date>.")
+    if input(f"Type {source.name} to go on: ").strip() != source.name:
+        raise ValueError("Nothing restored: that wasn't the backup's name.")
+    parts = read_backup(source)
+    check_backup(parts)  # before anything is replaced
+    user, name = database()
+    db = ("exec", "-T", "db")
+    compose("stop", "shell")
+    compose_bytes(*db, "dropdb", "-U", user, "--force", name)  # a fresh database: no table from later code stays behind
+    compose_bytes(*db, "createdb", "-U", user, name)
+    compose_bytes(*db, "pg_restore", "-U", user, "--no-owner", "--exit-on-error", "-d", name, data=parts["shell.dump"])
+    compose_bytes("exec", "-T", "mongo", "mongorestore", "--archive", "--gzip", "--drop", data=parts["tilbot.archive"])
+    compose_bytes(
+        "exec", "-T", "tilbot-backend", "sh", "-c", "rm -rf projects/* proj_pub/* && tar -xzf -",
+        data=parts["tilbot-files.tar.gz"],
+    )
+    aside = ROOT / f"project-before-restore-{time.strftime('%Y-%m-%d-%H%M%S')}"
+    if (ROOT / "project").exists():
+        (ROOT / "project").rename(aside)
+    zipfile.ZipFile(io.BytesIO(parts["project.zip"])).extractall(ROOT / "project")
+    compose("restart", "tilbot-backend")
+    up()
+    print(f"Restored {source.name}. project/ from before the restore is in {aside.name}.")
+
+
+def update() -> None:
+    """After new code (git pull) or a new pin in components.toml: a backup, then rebuild, then the tests."""
+    folder = backup()
+    try:
+        if up():
+            raise ValueError("not everything stayed up after the rebuild")
+        if shell_env() == "development":  # the tests come with the development setup only
+            compose("exec", "shell", "pytest")
+    except (subprocess.CalledProcessError, ValueError):
+        print(f"The update failed. To go back: return to the code you had, then python start_shell.py restore {folder}")
+        raise
+    print(f"Updated and checked. The backup from just before is {folder}.")
+
+
+def erase() -> None:
+    """Delete every participant's data, at the end of a study (shell/monitor/removal.py)."""
+    print(f'This deletes every participant of "{study_name()}" with their answers, questions and transcripts.')
+    print("Researcher accounts and Tilbot's projects stay. Backups made earlier still hold the data.")
+    typed = input("Type the study's name to go on: ").strip()
+    compose("exec", "shell", "python", "manage.py", "erase", typed)  # the shell refuses a wrong name
 
 
 def updates() -> None:
@@ -212,7 +386,10 @@ def lock() -> None:
     )
 
 
-COMMANDS = {"up": up, "trust": trust, "researcher": researcher, "updates": updates, "lock": lock}
+COMMANDS = {
+    "up": up, "trust": trust, "researcher": researcher, "backup": backup, "restore": restore,
+    "updates": updates, "update": update, "erase": erase, "lock": lock,
+}
 
 
 def main() -> None:
@@ -221,14 +398,14 @@ def main() -> None:
         sys.exit(__doc__)
     try:
         if args[0] in COMMANDS:
-            COMMANDS[args[0]]()
+            COMMANDS[args[0]](*args[1:])
         else:
             compose(*args)
     except subprocess.CalledProcessError as error:
         sys.exit(error.returncode)
     except KeyError as error:
         sys.exit(f"start_shell.py: components.toml lacks {error}")
-    except (FileNotFoundError, ValueError) as error:
+    except (FileNotFoundError, ValueError, tarfile.TarError, zipfile.BadZipFile) as error:
         sys.exit(f"start_shell.py: {error}")
 
 

@@ -1,13 +1,18 @@
 import csv
 import dataclasses
 import io
+import sys
 import zipfile
 
 import pytest
 from django.contrib.auth.models import User
+from django.contrib.sessions.models import Session
+from django.core.management import call_command
 from django.core.management.base import CommandError
+from django.test import Client
 
 from accounts.models import Participant
+from accounts.session import SESSION_KEY
 from config.project import Feedback, Item, Scale
 from monitor.management.commands.researcher import add_researcher
 from records.models import Answer, Question
@@ -92,3 +97,57 @@ def test_export_has_the_questions_asked(client, researcher, data):
     rows = csv_rows(client.post("/researcher/export", {"codes": "with"}), "questions.csv")
     assert rows[0] == ["participant", "question", "entry", "at"]
     assert rows[1][:3] == ["AAAA", "Can I stop?", "stop"]
+
+
+def test_remove_needs_a_login(client, db):
+    assert client.post("/researcher/remove", {"code": "AAAA"}).status_code == 302
+
+
+def test_remove_shows_what_goes_before_deleting(client, researcher, data):
+    page = client.post("/researcher/remove", {"code": "aaaa"}).content.decode()
+    assert "Delete AAAA for good" in page and "<td>1</td>" in page
+    assert Participant.objects.filter(code="AAAA").exists()
+
+
+def test_remove_says_so_for_an_unknown_code(client, researcher, data):
+    assert "No participant has the code ZZZZ" in client.post("/researcher/remove", {"code": "ZZZZ"}).content.decode()
+
+
+def test_remove_deletes_one_participant_with_their_data_and_sessions(client, researcher, data):
+    first = Participant.objects.get(code="AAAA")
+    Question.objects.create(participant=first, text="Can I stop?", entry="stop")
+    participant_browser = Client()
+    session = participant_browser.session
+    session[SESSION_KEY] = first.pk
+    session.save()
+    client.post("/researcher/remove", {"code": "AAAA", "confirm": "AAAA"})
+    assert not Participant.objects.filter(code="AAAA").exists()
+    assert not Question.objects.exists() and Answer.objects.count() == 1  # BBBB's answer stays
+    assert not Session.objects.filter(session_key=session.session_key).exists()
+
+
+def test_erase_needs_the_study_name(data):
+    with pytest.raises(CommandError, match="Nothing deleted"):
+        call_command("erase", "not the name")
+    assert Participant.objects.count() == 2
+
+
+def test_erase_deletes_every_participant_but_keeps_researchers(researcher, data, settings):
+    call_command("erase", settings.STUDY.name)
+    assert not Participant.objects.exists() and not Answer.objects.exists()
+    assert User.objects.filter(username="researcher").exists()
+
+
+def test_backup_cipher_round_trip(monkeypatch):
+    def run(direction, data):
+        out = io.BytesIO()
+        monkeypatch.setattr("sys.stdin", io.TextIOWrapper(io.BytesIO(data)))
+        monkeypatch.setattr("sys.stdout", io.TextIOWrapper(out))
+        call_command("backup_cipher", direction)
+        sys.stdout.flush()
+        return out.getvalue()
+    sealed = run("encrypt", b"\x00binary dump\xff")
+    assert b"binary dump" not in sealed
+    assert run("decrypt", sealed) == b"\x00binary dump\xff"
+    with pytest.raises(CommandError, match="not made with the FIELD_ENCRYPTION_KEY"):
+        run("decrypt", b"something else")

@@ -10,6 +10,7 @@ from django.shortcuts import render
 from django.utils import timezone
 
 from accounts.models import Participant
+from monitor import removal
 from monitor.export import FILES, numbering
 from records.models import Answer, Question, TranscriptLine
 
@@ -44,3 +45,18 @@ def export(request):
     response = HttpResponse(archive.getvalue(), content_type="application/zip")
     response["Content-Disposition"] = f'attachment; filename="export-{kind}-{stamp}.zip"'
     return response
+
+
+@login_required
+def remove(request):
+    """Remove one participant on request: the code first, then what will be deleted, then a confirmation."""
+    if request.method != "POST":
+        return render(request, "monitor/remove.html")
+    code = request.POST.get("code", "").strip().upper()
+    participant = Participant.objects.filter(code=code).first()
+    if participant is None:
+        return render(request, "monitor/remove.html", {"code": code, "unknown": True})
+    if request.POST.get("confirm") != code:
+        return render(request, "monitor/remove.html", {"participant": participant, "stored": removal.stored_for(participant)})
+    removal.remove(participant)
+    return render(request, "monitor/remove.html", {"removed": code})

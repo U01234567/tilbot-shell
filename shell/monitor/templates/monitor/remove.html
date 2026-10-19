@@ -1,0 +1,34 @@
+{% extends "monitor/base.html" %}
+{% block title %}Remove a participant · {{ study.name }}{% endblock %}
+{% block content %}
+  <h1>Remove a participant</h1>
+  {% if removed %}
+    <p class="notice">Participant {{ removed }} and everything stored for them are deleted. Backups made before still hold their data: delete or keep those as the data management plan says.</p>
+    <p><a href="{% url 'researcher' %}">Back to the overview</a></p>
+  {% elif participant %}
+    <p>This deletes participant <strong>{{ participant.code }}</strong> (signed up {{ participant.created|date:"Y-m-d" }}) for good:</p>
+    <table class="facts">
+      {% for name, count in stored.items %}<tr><th>{{ name|capfirst }}</th><td>{{ count }}</td></tr>{% endfor %}
+    </table>
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="code" value="{{ participant.code }}">
+      <input type="hidden" name="confirm" value="{{ participant.code }}">
+      <div class="actions">
+        <button type="submit">Delete {{ participant.code }} for good</button>
+        <a class="button quiet" href="{% url 'researcher' %}">Cancel</a>
+      </div>
+    </form>
+  {% else %}
+    <p>For a participant who asks to have their data removed. Only their code identifies them: ask them for it.</p>
+    <form method="post">
+      {% csrf_token %}
+      <div>
+        <label for="code">Their code</label>
+        <input id="code" name="code" value="{{ code }}" autocomplete="off" required autofocus>
+        {% if unknown %}<p class="errorlist">No participant has the code {{ code }}.</p>{% endif %}
+      </div>
+      <div class="actions"><button type="submit">Show what will be deleted</button></div>
+    </form>
+  {% endif %}
+{% endblock %}

@@ -13,7 +13,7 @@ Check this file against the code before every submission.
 | Every questionnaire answer: item id, value, time | Postgres, table `records_answer` | the value is encrypted (Fernet: AES-128 with HMAC-SHA256) |
 | Every chat message, from the participant and the bot, with its time; only if `project.toml` says `transcripts.enabled = true` | Postgres, table `records_transcriptline` | the text is encrypted, as above |
 | Every question typed in phase 3, with the knowledge base entry it matched and its time; the text only if `transcripts.enabled = true` | Postgres, table `records_question` | the text is encrypted, as above |
-| Which participant a browser is signed in as, and the code shown on the sign-up page | Postgres, table `django_session` | deleted after 12 hours |
+| Which participant a browser is signed in as, and the code shown on the sign-up page | Postgres, table `django_session` | expires after 12 hours, and is deleted at the next start of the shell or backup |
 
 ## Researcher accounts
 
@@ -24,6 +24,13 @@ computer that runs the shell.
 
 No names, email addresses, phone numbers or other contact details are asked for or stored.
 The code is the only link between a person and their data. Whoever holds a code can sign in with it.
+
+## Removing data
+
+A researcher can remove one participant, with all their answers, questions, transcript lines and
+sign-in sessions, from the researcher dashboard ("Remove a participant", by their code), and every
+participant at once at the end of a study (`python start_shell.py erase`). Neither happens automatically.
+Backups made before keep the removed data until they are deleted themselves.
 
 ## Data about the connection
 
@@ -37,7 +44,8 @@ other by whoever reads the database.
 
 Caddy, the web server, keeps no access log. The containers' own output (`docker compose logs`) can
 contain a participant's raw answer when the shell refuses it (an answer off the scale), and error
-messages from Tilbot; those logs live on the machine and are not kept after the containers are removed.
+messages from Tilbot; those logs live on the machine, are capped at 3 files of 10 MB per service (older lines
+go first), and are not kept after the containers are removed.
 
 ## What the participant's browser is given
 
@@ -49,11 +57,6 @@ scale, computed from their latest answers each time the results open, and never 
 participant can load their results; Tilbot only sends the signal to open them and never sees the scores.
 Whether a result is shown as "worth discussing" comes from the thresholds the study chose; how that is
 worded, so that it never reads as a diagnosis, is the study's responsibility (`project/README.md`).
-
-If the study has `knowledge.xlsx`, a question the participant types goes from Tilbot to the shell, and
-from the shell to vector-similarity-intent, both inside the Docker network. That service keeps nothing,
-logs only the knowledge base's own phrasings with their scores, and calls no outside service once its
-language model is downloaded. The answer is taken word for word from `knowledge.xlsx`: nothing is generated.
 
 ## Where the data lives
 
@@ -71,13 +74,19 @@ a researcher's laptop, which must have full-disk encryption.
 Whether this counts as special-category data under the GDPR (health, political opinions, …) depends
 on the study; the study's `project/README.md` says so.
 
-**The vector-similarity-intent service** (phase 3, not running yet) will receive the text of
-participants' questions to match them with the knowledge base. It writes that text to its own log;
-this has to be fixed before phase 3 is used with real participants.
+**The vector-similarity-intent service** runs only for a study with `knowledge.xlsx`. A question the
+participant types goes from Tilbot to the shell, and from the shell to this service, both inside the Docker
+network. It keeps nothing, logs only the knowledge base's own phrasings with their scores (its `main.py` at
+the pinned commit), and calls no outside service once its language model is downloaded. The answer is
+taken word for word from `knowledge.xlsx`: nothing is generated.
 
 ## What leaves the machine
 
-- **No participant data**, except backups and exports made by the team. An export (researcher dashboard)
+- **Backups** (`python start_shell.py backup`) hold everything in the volumes above and the project folder,
+  every file encrypted with `FIELD_ENCRYPTION_KEY`; they can't be read without that key, which is never in a
+  backup. They are written to `backups/` on the same machine unless the team names another place; copies
+  elsewhere, and how long they are kept, are the study's decision (`project/README.md`).
+- **No other participant data**, except exports made by the team. An export (researcher dashboard)
   contains answers, scale scores, questions and transcripts decrypted, with either the participants' codes or numbers instead;
   the page explains the difference. Where exports are kept is the study's decision (`project/README.md`).
 - At build time the machine downloads code and images: Tilbot and vector-similarity-intent from

@@ -34,7 +34,7 @@ How the parts fit together, where everything lives, and the contract between the
 | `components.toml` | Tilbot and vector-similarity-intent service: repo, pinned commit, notes | moving to a newer upstream commit |
 | `compose.yaml` | every service as it runs for real | adding a service or a volume |
 | `compose.dev.yaml` | only what differs in development | changing how development runs |
-| `start_shell.py` | `up` (with `.env`, secrets and checks), `trust`, `updates`, `lock`, or any `docker compose` command | adding a routine task |
+| `start_shell.py` | `up` (with `.env`, secrets and checks), `trust`, `researcher`, `backup`, `restore`, `updates`, `update`, `erase`, `lock`, or any `docker compose` command | adding a routine task |
 | `proxy/Caddyfile` | HTTPS, security headers, which routes are public | adding a public page or a host |
 | `tilbot/Dockerfile` | builds Tilbot at the pinned commit with our patches | Tilbot changes how it builds |
 | `tilbot/patches/` | our changes to Tilbot, one concern per patch | Tilbot lacks something we need |
@@ -43,12 +43,12 @@ How the parts fit together, where everything lives, and the contract between the
 | `shell/config/` | Django settings, URLs, the study loader (`project.py`) | adding a setting or an app |
 | `shell/templates/`, `shell/static/` | shared page layout, the shell's CSS, and `js/chat.js` (opens the results) | changing the look of every page |
 | `shell/accounts/` | participant codes, sign-up, sign-in, lockout | changing how participants get in |
-| `shell/records/` | answers, questions asked and transcripts, encrypted | storing a new kind of participant data |
+| `shell/records/` | answers, questions asked and transcripts, encrypted; `backup_cipher`, which encrypts backups with the same key | storing a new kind of participant data |
 | `shell/bridge/` | the chat page and the endpoints Tilbot calls | changing the contract with Tilbot |
 | `shell/phase1_collect/` | rules after each answer: valid? follow-ups? | changing how answers are judged |
 | `shell/phase2_feedback/` | the results: scale scores (`scoring.py`, pure functions) and the panel beside the chat | changing how results are scored or shown |
 | `shell/phase3_questions/` | matching a question to the knowledge base, through vector-similarity-intent (`matching.py`) | changing how questions are matched or answered |
-| `shell/monitor/` | the researcher dashboard: counts, and the data export (`export.py` turns the tables into CSV rows) | adding a researcher page |
+| `shell/monitor/` | the researcher dashboard: counts, the data export (`export.py`), and removing data (`removal.py`, also used by `erase`) | adding a researcher page |
 | `project-example/` | the shape of `project/`, with dummy content | the project format changes |
 | `project/` | the real study, not committed | the research team changes a setting |
 | `docs/` | this file, `decisions.md`, `operations.md` | something here is no longer true |

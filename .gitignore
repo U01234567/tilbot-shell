@@ -1,5 +1,7 @@
 # The real study content and all secrets stay off GitHub.
 /project/
+/project-before-restore-*/
+/backups/
 .env
 *.zip
 *.dump

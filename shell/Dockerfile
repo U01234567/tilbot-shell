@@ -9,4 +9,5 @@ COPY requirements.lock .
 RUN pip install --no-cache-dir --require-hashes -r requirements.lock
 
 COPY . .
-CMD ["sh", "-c", "python manage.py migrate && python manage.py collectstatic --noinput && gunicorn config.wsgi --bind 0.0.0.0:8000 --workers 3"]
+# Every start: bring the database up to date, drop expired sign-in sessions, then serve.
+CMD ["sh", "-c", "python manage.py migrate && python manage.py clearsessions && python manage.py collectstatic --noinput && gunicorn config.wsgi --bind 0.0.0.0:8000 --workers 3"]
