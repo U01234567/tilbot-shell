@@ -4,6 +4,7 @@ project.toml holds what the research team checks and edits: sign-up limits and o
 the participant sees (so each study picks its own language), and the Tilbot project.
 questionnaire.toml holds, per item, the answer scale, the answer words and the threshold for follow-ups.
 feedback.toml, if the study has one, holds the scales and texts of the participant's results (phase 2).
+knowledge.xlsx, if the study has one, holds the questions and answers of phase 3.
 A mistake in any of them stops the shell with an error that names the problem.
 """
 
@@ -11,6 +12,8 @@ import tomllib
 import zoneinfo
 from dataclasses import dataclass
 from pathlib import Path
+
+import openpyxl
 
 
 @dataclass(frozen=True)
@@ -45,6 +48,17 @@ class Feedback:
     scales: tuple[Scale, ...]
 
 
+@dataclass(frozen=True)
+class Entry:
+    """One question of the knowledge base, with the answer the participant gets for it (phase 3)."""
+
+    id: str
+    topic: str
+    phrasings: tuple[str, ...]  # the question first, then other ways to ask it
+    answer: str
+    link: str  # a web address shown under the answer; empty: none
+
+
 # project-example's placeholder for [tilbot] project_id: no Tilbot project is linked yet.
 NO_TILBOT_PROJECT = "0" * 32
 
@@ -59,6 +73,8 @@ FEEDBACK_TEXT_KEYS = (
     "worth_discussing", "none", "print", "back",
 )
 HIGHER = ("better", "worse")
+# The columns of knowledge.xlsx, in its first row. topic, phrasings and link may stay empty.
+KNOWLEDGE_COLUMNS = ("id", "topic", "question", "phrasings", "answer", "link")
 
 
 @dataclass(frozen=True)
@@ -74,6 +90,7 @@ class Study:
     texts: dict[str, str]
     items: dict[str, Item]
     feedback: Feedback | None = None  # None: the study shows no results
+    knowledge: tuple[Entry, ...] | None = None  # None: the study answers no questions
 
 
 def load_study(project_dir: Path) -> Study:
@@ -99,6 +116,7 @@ def load_study(project_dir: Path) -> Study:
         texts=settings["texts"],
         items={item.id: item for item in items},
         feedback=load_feedback(project_dir / "feedback.toml", ids),
+        knowledge=load_knowledge(project_dir / "knowledge.xlsx"),
     )
 
 
@@ -149,3 +167,35 @@ def parse_scale(raw: dict, item_ids: list[str]) -> Scale:
         problem=raw.get("problem", ""),
         fine=raw.get("fine", ""),
     )
+
+
+def load_knowledge(path: Path) -> tuple[Entry, ...] | None:
+    """Read knowledge.xlsx: its first sheet, one question per row under a row of column names.
+
+    A study without the file answers no questions. Empty rows are skipped.
+    """
+    if not path.exists():
+        return None
+    rows = list(openpyxl.load_workbook(path, data_only=True).worksheets[0].iter_rows(values_only=True))
+    columns = [str(name or "").strip().lower() for name in rows[0]] if rows else []
+    missing = [name for name in KNOWLEDGE_COLUMNS if name not in columns]
+    if missing:
+        raise ValueError(f"knowledge.xlsx: the first row lacks the column {', '.join(missing)}")
+    cells = [{name: str(value or "").strip() for name, value in zip(columns, row)} for row in rows[1:]]
+    entries = tuple(parse_entry(row) for row in cells if any(row.values()))
+    check_unique("id", [entry.id for entry in entries])
+    check_unique("question or phrasing", [p.lower() for entry in entries for p in entry.phrasings])
+    return entries
+
+
+def parse_entry(row: dict[str, str]) -> Entry:
+    if not (row["id"] and row["question"] and row["answer"]):
+        raise ValueError(f"knowledge.xlsx: every row needs an id, a question and an answer: {row}")
+    others = [line.strip() for line in row["phrasings"].splitlines() if line.strip()]
+    return Entry(id=row["id"], topic=row["topic"], phrasings=(row["question"], *others), answer=row["answer"], link=row["link"])
+
+
+def check_unique(what: str, values: list[str]) -> None:
+    twice = sorted({value for value in values if values.count(value) > 1})
+    if twice:
+        raise ValueError(f"knowledge.xlsx: each {what} may appear once, but these appear twice: {twice}")

@@ -1,6 +1,6 @@
-"""Phase 3, questions (not built yet): the participant asks, the knowledge base answers.
+"""Phase 3, questions: the participant asks, the knowledge base answers.
 
-Will hold: the knowledge base from project/knowledge.xlsx (topics, questions, example phrasings,
-answers, optional links), and two-step matching through vector-similarity-intent: first the topic,
-then the question within it. The answer may use the participant's own phase-1 data.
+The knowledge base is project/knowledge.xlsx (config/project.py reads it). matching.py finds the entry
+whose question or phrasing means most nearly the same, through vector-similarity-intent; the bridge's
+/bridge/ask gives Tilbot the answer, word for word from the file.
 """

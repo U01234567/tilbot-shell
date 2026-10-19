@@ -28,6 +28,15 @@ class TranscriptLine(models.Model):
         ordering = ["conversation", "seq"]
 
 
+class Question(models.Model):
+    """One question a participant typed (phase 3), and the knowledge base entry it was matched to."""
+
+    participant = models.ForeignKey("accounts.Participant", on_delete=models.PROTECT, related_name="questions")
+    text = EncryptedTextField(blank=True)  # empty when the study keeps no transcripts: free text can say anything
+    entry = models.CharField(max_length=100, blank=True)  # the entry's id in knowledge.xlsx; empty: no match
+    at = models.DateTimeField(auto_now_add=True)
+
+
 def latest_answers(participant_id: int) -> dict[str, int]:
     """Item id -> the participant's answer to it; when an item was answered twice, the latest counts."""
     answers = Answer.objects.filter(participant_id=participant_id).order_by("at", "pk")

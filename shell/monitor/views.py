@@ -11,7 +11,7 @@ from django.utils import timezone
 
 from accounts.models import Participant
 from monitor.export import FILES, numbering
-from records.models import Answer, TranscriptLine
+from records.models import Answer, Question, TranscriptLine
 
 
 @login_required
@@ -20,6 +20,7 @@ def overview(request):
     counts = {
         "participants": Participant.objects.count(),
         "answers": Answer.objects.count(),
+        "questions": Question.objects.count(),
         "transcript_lines": TranscriptLine.objects.count(),
     }
     return render(request, "monitor/overview.html", {"counts": counts, "last_answer": last_answer})
@@ -27,7 +28,7 @@ def overview(request):
 
 @login_required
 def export(request):
-    """A zip of four CSV files, with the participants' codes or with numbers instead (export.py)."""
+    """A zip of five CSV files, with the participants' codes or with numbers instead (export.py)."""
     if request.method != "POST":
         return render(request, "monitor/export.html")
     with_codes = request.POST.get("codes") == "with"

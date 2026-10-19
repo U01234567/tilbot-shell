@@ -2,7 +2,7 @@
 
 A framework for research chatbots that get to know a participant, give feedback, and then answer their questions. It wraps Tilbot for the conversation and vector-similarity-intent for understanding free text, and adds what a study needs around them: participant accounts, encrypted storage, rules, a knowledge base and a dashboard. One study at a time, defined entirely in one project folder; the same framework serves patients, voters, students or any other group.
 
-**Status: version 0.8.** Phases 1 and 2 work end to end: sign-up, the chat, storing answers and deciding follow-ups, the participant's results beside the chat, and a researcher dashboard to export the data. Phase 3 and the knowledge base are not built yet; see [known gaps](docs/decisions.md#known-gaps-in-version-08). The descriptions below are the framework as a whole.
+**Status: version 0.9.** All three phases work end to end: sign-up, the chat, storing answers and deciding follow-ups, the participant's results beside the chat, questions answered from the study's knowledge base, and a researcher dashboard to export the data. Not yet: backups, updates and running on a server; see [known gaps](docs/decisions.md#known-gaps-in-version-09). The descriptions below are the framework as a whole.
 
 ## Quick start
 
@@ -35,7 +35,7 @@ And three phases, always in this order:
 
 1. **Collect.** The bot asks the items of a questionnaire, written in Tilbot's editor. The shell stores each answer and, from thresholds in the project's settings, decides whether follow-up questions come next.
 2. **Feedback.** The shell turns the answers into results beside the chat: a bar per scale, with its threshold and a sentence, scored as in the EORTC QLQ-C30 manual. The flowchart decides when they open.
-3. **Questions.** The participant asks whatever they want. The shell matches the question to the knowledge base (topic first, then question) and answers, using the participant's own data where the answer calls for it.
+3. **Questions.** The participant asks whatever they want. The shell finds the question in the knowledge base that means most nearly the same, and gives its answer word for word, with a clickable link where there is one.
 
 Everything a study decides (its language and texts, age range, options, thresholds, results, knowledge base, theme, the Tilbot flowchart, and its ethics choices) lives in `project/`, a folder next to `start_shell.py` that is never committed (inside the containers it appears as `/project`). `project-example/` is the empty template and lists what a study has to decide.
 

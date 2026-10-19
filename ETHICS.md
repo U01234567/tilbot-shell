@@ -12,6 +12,7 @@ Check this file against the code before every submission.
 | A random 4-character code, age, gender, date of sign-up | Postgres, table `accounts_participant` | access to the server |
 | Every questionnaire answer: item id, value, time | Postgres, table `records_answer` | the value is encrypted (Fernet: AES-128 with HMAC-SHA256) |
 | Every chat message, from the participant and the bot, with its time; only if `project.toml` says `transcripts.enabled = true` | Postgres, table `records_transcriptline` | the text is encrypted, as above |
+| Every question typed in phase 3, with the knowledge base entry it matched and its time; the text only if `transcripts.enabled = true` | Postgres, table `records_question` | the text is encrypted, as above |
 | Which participant a browser is signed in as, and the code shown on the sign-up page | Postgres, table `django_session` | deleted after 12 hours |
 
 ## Researcher accounts
@@ -49,6 +50,11 @@ participant can load their results; Tilbot only sends the signal to open them an
 Whether a result is shown as "worth discussing" comes from the thresholds the study chose; how that is
 worded, so that it never reads as a diagnosis, is the study's responsibility (`project/README.md`).
 
+If the study has `knowledge.xlsx`, a question the participant types goes from Tilbot to the shell, and
+from the shell to vector-similarity-intent, both inside the Docker network. That service keeps nothing,
+logs only the knowledge base's own phrasings with their scores, and calls no outside service once its
+language model is downloaded. The answer is taken word for word from `knowledge.xlsx`: nothing is generated.
+
 ## Where the data lives
 
 Everything is stored in Docker volumes on the machine that runs the shell. During development this is
@@ -60,7 +66,7 @@ a researcher's laptop, which must have full-disk encryption.
 | `mongo` | Tilbot's researcher logins (hashed passwords), project definitions, dashboard settings | no; Tilbot's own conversation logging is off |
 | `tilbot-projects`, `tilbot-public` | the flowcharts' data tables and avatars (uploaded by researchers; an SVG avatar is served as is) | no |
 | `static`, `caddy-data`, `tilbot-shell-caddy-ca` | the shell's CSS, Caddy's certificates | no |
-| `models` | the language model for phase 3 (not used yet) | no |
+| `models` | the language model for phase 3, downloaded once, only for a study with `knowledge.xlsx` | no |
 
 Whether this counts as special-category data under the GDPR (health, political opinions, …) depends
 on the study; the study's `project/README.md` says so.
@@ -72,7 +78,7 @@ this has to be fixed before phase 3 is used with real participants.
 ## What leaves the machine
 
 - **No participant data**, except backups and exports made by the team. An export (researcher dashboard)
-  contains answers, scale scores and transcripts decrypted, with either the participants' codes or numbers instead;
+  contains answers, scale scores, questions and transcripts decrypted, with either the participants' codes or numbers instead;
   the page explains the difference. Where exports are kept is the study's decision (`project/README.md`).
 - At build time the machine downloads code and images: Tilbot and vector-similarity-intent from
   GitHub, container images from Docker Hub, Python packages from PyPI, Node packages from npm, and

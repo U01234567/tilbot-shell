@@ -93,8 +93,8 @@ services:
     volumes:
       - mongo:/data/db
 
-  # Intent recognition, a fixed part of the framework (phase 3). Until phase 3 is built it is off by
-  # default so developers don't download its model for nothing: start it with --profile phase3.
+  # Intent recognition for phase 3. start_shell.py turns on the profile only when project/knowledge.xlsx
+  # exists, so a study without questions doesn't download the language model.
   vector-similarity-intent:
     profiles: [phase3]
     build:

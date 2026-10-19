@@ -188,13 +188,25 @@ Phase 2 shows each scale of `project/feedback.toml` as a bar from 0 to 100, with
 - **Flip complaints so a longer bar is always better.** Easier to read at a glance, but the patient would see a different number than the export and the literature. Colour, label and the sentence above each group carry the meaning instead.
 - **A narrative with placeholders, configurable groups, score bands.** More expressive, but more to configure and to get wrong; one sentence per scale and state was enough for the first study.
 
-## Known gaps in version 0.8
+## Phase 3: answers from the study's own knowledge base
 
-- **Not built yet:** phase 3 (and so the knowledge base), status and logs in the researcher dashboard, a chat page in the study's own look, backups and the update flow in `start_shell.py`, and running on a server.
-- **vector-similarity-intent is started with `--profile phase3`** until phase 3 exists, so developers don't download its model for nothing.
+Participants' questions are matched to `project/knowledge.xlsx`, one question per row with example phrasings, and answered word for word from it. The shell asks vector-similarity-intent which question or phrasing is closest in meaning, in one step over all of them; a wrong match or no match says so instead of guessing. Every question asked is kept with the entry it matched (the text only when the study keeps transcripts), so a study can evaluate the matching. Links in answers are clickable through a small Tilbot patch.
+
+- **The knowledge base as CSV or TOML.** No extra library, but Dutch Excel breaks CSV (semicolons, accents), and 100 long answers are awkward in TOML. Excel is what researchers edit; reading it costs one small, pure-Python library (openpyxl).
+- **Two steps, topic first, then the question.** Helps when many questions look alike across topics, but a wrong topic in the first step makes the second fail. The topic stays in the file; two steps can follow once a real knowledge base shows the need.
+- **A language model that writes its own answers.** More flexible, but its answers can be wrong, and the question would usually go to an outside service.
+- **Links in the panel beside the chat, or as plain text.** The panel keeps everything ours but covers the chat on a phone after each answer; plain text makes participants copy addresses. The patch is about 15 lines and builds no HTML from the message.
+- **No separate questions table.** The transcripts hold the questions, but not what they were matched to.
+
+## Known gaps in version 0.9
+
+- **Not built yet:** status and logs in the researcher dashboard, a chat page in the study's own look, backups and the update flow in `start_shell.py`, and running on a server.
+- **Matching is tested with a stand-in, not the real model.** The language model is too large for the automated tests; check the matching on the real knowledge base before a study starts, and add phrasings where it misses.
+- **No limit on how many questions a participant asks.** Each question costs the matching service a moment of work; a participant who sends hundreds slows it for others.
+- **The answer to a question can't use the participant's own data** ("your pain score is …") yet.
 - **Transcripts are best-effort.** If the shell is down, Tilbot logs an error and that line is lost. Answers are not lost: they are asked again.
 - **The `transcripts.enabled` setting is read by the shell only.** Tilbot still sends every event; the shell discards them. That costs nothing but is worth knowing.
-- **Answers are numbers or fixed words** (`labels` in `questionnaire.toml`); free text is phase 3.
+- **Questionnaire answers are numbers or fixed words** (`labels` in `questionnaire.toml`); free text is only for questions (phase 3).
 - **The results' scores are mean-based (0–100).** Questionnaires scored by a plain sum would need a second method in `phase2_feedback/scoring.py`.
 - **No healthchecks** in the compose files yet.
 - **The patches were made against the code of 12 October 2026.** If they don't apply to a newer pinned commit, regenerate them.

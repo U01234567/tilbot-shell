@@ -11,7 +11,7 @@ from django.core.exceptions import ImproperlyConfigured
 
 from config.project import load_study
 
-SHELL_VERSION = "0.8.0"  # shown in the mark at the bottom of the shell's pages
+SHELL_VERSION = "0.9.0"  # shown in the mark at the bottom of the shell's pages
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
@@ -27,6 +27,7 @@ DEBUG = required("SHELL_ENV") == "development"
 SECRET_KEY = required("DJANGO_SECRET_KEY")
 SHELL_HOST = required("SHELL_HOST")
 BOT_URL = f"https://{required('BOT_HOST')}"
+INTENT_URL = "http://vector-similarity-intent:8081/"  # phase 3, inside the Docker network only
 BRIDGE_SECRET = required("BRIDGE_SECRET")
 FIELD_ENCRYPTION_KEY = required("FIELD_ENCRYPTION_KEY")
 
@@ -54,8 +55,7 @@ INSTALLED_APPS = [
     "bridge",
     "monitor",
     "phase2_feedback",
-    # phase3_questions joins when it gets models or pages.
-    # phase1_collect is plain Python (rules only) and needs no entry here.
+    # phase1_collect and phase3_questions are plain Python (rules and matching) and need no entry here.
 ]
 
 MIDDLEWARE = [

@@ -10,7 +10,7 @@ from django.core.management.base import CommandError
 from accounts.models import Participant
 from config.project import Feedback, Item, Scale
 from monitor.management.commands.researcher import add_researcher
-from records.models import Answer
+from records.models import Answer, Question
 
 
 @pytest.fixture
@@ -85,3 +85,10 @@ def test_export_has_the_scores_of_the_results(client, researcher, data, settings
     settings.STUDY = dataclasses.replace(settings.STUDY, items=items, feedback=Feedback(texts={}, scales=(pain,)))
     rows = csv_rows(client.post("/researcher/export", {"codes": "without"}), "scores.csv")
     assert rows == [["participant", "scale", "score", "worth_discussing"], ["1", "pain", "30.0", "False"], ["2", "pain", "70.0", "True"]]
+
+
+def test_export_has_the_questions_asked(client, researcher, data):
+    Question.objects.create(participant=Participant.objects.get(code="AAAA"), text="Can I stop?", entry="stop")
+    rows = csv_rows(client.post("/researcher/export", {"codes": "with"}), "questions.csv")
+    assert rows[0] == ["participant", "question", "entry", "at"]
+    assert rows[1][:3] == ["AAAA", "Can I stop?", "stop"]

@@ -16,13 +16,13 @@ How the parts fit together, where everything lives, and the contract between the
    Postgres ◀── shell (Django)          Tilbot frontend ──ws──▶ Tilbot backend ──▶ Mongo
   (encrypted)        ▲                                        (+ our patches)
                      │                                                │
-                     └──────── /bridge/save, /bridge/log ─────────────┘
-                                   (inside the Docker network)
-
-   vector-similarity-intent service: phase 3, called only by the shell (not running yet)
+                     └───── /bridge/save, /bridge/log, /bridge/ask ───┘
+                     │             (inside the Docker network)
+                     ▼
+   vector-similarity-intent: phase 3, called only by the shell, only when project/knowledge.xlsx exists
 ```
 
-- **The shell is the hub.** Tilbot only calls the shell, and only the shell will call the vector-similarity-intent service.
+- **The shell is the hub.** Tilbot only calls the shell, and only the shell calls the vector-similarity-intent service.
 - **Participants see two sites.** The shell at `SHELL_HOST` handles sign-up, sign-in and the chat page. Tilbot at `BOT_HOST` is only ever shown inside the shell's chat page, in an iframe.
 - **Tilbot's researcher dashboard is not public.** It sits on port 8081, which only `compose.dev.yaml` publishes, and only to `127.0.0.1`.
 - **The shell's pages look like Tilbot, on a light purple background.** That background and the white cards (`shell/static/css/shell.css`) mark every page the shell serves, and so controls and secures; what shows without it is Tilbot's (its dashboard, and the chat inside the iframe). The researcher pages always carry the mark `tilbot-shell <version> · researcher` and never take the study's colours. The participant pages take the study's colours from `project/theme/tokens.css`, and carry the mark `· development` only while `SHELL_ENV=development`: participants of a real study never see the software's name.
@@ -43,11 +43,11 @@ How the parts fit together, where everything lives, and the contract between the
 | `shell/config/` | Django settings, URLs, the study loader (`project.py`) | adding a setting or an app |
 | `shell/templates/`, `shell/static/` | shared page layout, the shell's CSS, and `js/chat.js` (opens the results) | changing the look of every page |
 | `shell/accounts/` | participant codes, sign-up, sign-in, lockout | changing how participants get in |
-| `shell/records/` | answers and transcripts, encrypted | storing a new kind of participant data |
+| `shell/records/` | answers, questions asked and transcripts, encrypted | storing a new kind of participant data |
 | `shell/bridge/` | the chat page and the endpoints Tilbot calls | changing the contract with Tilbot |
 | `shell/phase1_collect/` | rules after each answer: valid? follow-ups? | changing how answers are judged |
 | `shell/phase2_feedback/` | the results: scale scores (`scoring.py`, pure functions) and the panel beside the chat | changing how results are scored or shown |
-| `shell/phase3_questions/` | questions answered from the knowledge base (placeholder) | building phase 3 |
+| `shell/phase3_questions/` | matching a question to the knowledge base, through vector-similarity-intent (`matching.py`) | changing how questions are matched or answered |
 | `shell/monitor/` | the researcher dashboard: counts, and the data export (`export.py` turns the tables into CSV rows) | adding a researcher page |
 | `project-example/` | the shape of `project/`, with dummy content | the project format changes |
 | `project/` | the real study, not committed | the research team changes a setting |
@@ -55,7 +55,7 @@ How the parts fit together, where everything lives, and the contract between the
 
 Every fixed component has its own root folder: `shell/` is ours, `tilbot/` and `vector-similarity-intent/` each hold a build file and a `patches/` folder. The build applies whatever patches exist, so a folder stays in use when upstream merges our patches and the patch files are deleted.
 
-A folder becomes a Django app (listed in `INSTALLED_APPS`) only when it has models, pages or URLs. `phase1_collect` holds plain Python rules, so it isn't one.
+A folder becomes a Django app (listed in `INSTALLED_APPS`) only when it has models, pages or URLs. `phase1_collect` and `phase3_questions` hold plain Python, so they aren't.
 
 ## Our patches to Tilbot
 
@@ -69,6 +69,7 @@ Each patch is one concern, applied to the pinned commit at build time (`tilbot/p
 | `0004-safe-variable-sql` | Tilbot's data tables are read with parameters instead of pasted text | closes an SQL injection a participant could use through the chat |
 | `0005-browser-editor` | the flowchart editor works in the browser, against the server, for your own projects only | researchers need no desktop app; every editor route checks the login |
 | `0006-admin-password` | the first admin password comes from `.env`; Tilbot refuses to create the account without one | no `admin`/`admin` default |
+| `0007-clickable-links` | web addresses (`https://…`) in chat messages become links that open in a new tab | the message is split into text and addresses and shown as text: no HTML is built from it |
 
 ## The bridge contract
 
@@ -134,21 +135,49 @@ A study with `project/feedback.toml` shows the participant's results in a panel 
 
 Nothing about the results passes through Tilbot: the message carries no data, and `/results` answers only a signed-in participant, with their own answers.
 
+## Phase 3: questions
+
+A study with `project/knowledge.xlsx` answers the participant's own questions. The first sheet has one question per row, under a row with these column names:
+
+| Column | Holds | Required |
+|---|---|---|
+| `id` | a short name for the entry, used in the export | yes |
+| `topic` | a group, for the researcher's overview | no |
+| `question` | the question as a participant might ask it | yes |
+| `phrasings` | other ways to ask the same, one per line (Alt+Enter in Excel) | no |
+| `answer` | the answer, exactly as the participant will read it | yes |
+| `link` | a web address shown under the answer, clickable (patch 0007) | no |
+
+`project-example/knowledge-example.xlsx` is a filled-in example: rename a copy to `knowledge.xlsx` to switch phase 3 on. With the file present, `start_shell.py` also starts vector-similarity-intent; its first start downloads the language model (about 500 MB, once). The model is Dutch by default; a study in another language sets `INTENT_MODEL` in `.env` to a sentence-transformers model for its language.
+
+The shell sends the participant's question and every question and phrasing to vector-similarity-intent, which returns the one closest in meaning, or nothing when none is close enough. The participant gets that entry's answer word for word: nothing is generated.
+
+**In Tilbot's editor**, once per project, add a second external link under Settings, External processing: name `shell-ask`, address `http://shell:8000/bridge/ask`, send the user's input on, send the connectors off. Then:
+
+1. **A Text block** "Heb je nog een vraag?", whose *else* connector leads to step 2.
+2. **A Processing block "ask"**, using `shell-ask`, without parameters. Its connectors:
+   - `answered` → an Automatically proceed block whose text is the variable "previous connector label": the shell sends the answer as that label. It leads back to step 1.
+   - `unknown` → a block saying the bot has no answer (and who does), back to step 1
+   - *else* → "Something went wrong, let's try that again", back to step 1
+
+The shell keeps every question with the entry it was matched to (table `records_question`); the question's text only when the study keeps transcripts.
+
 ## The Caddyfile, line by line
 
 - **`{$SHELL_HOST} { … }`** is the shell. `encode gzip` compresses responses.
 - **The `header` block** sets the security headers:
-  - `Content-Security-Policy` allows only the shell's own scripts and styles, and frames only from `BOT_HOST`. Inline styles are allowed for Django's own pages. `frame-ancestors 'none'` stops other sites from framing the shell.
+  - `Content-Security-Policy` allows only the shell's own script and style files (no inline scripts or styles), and frames only from `BOT_HOST`. `frame-ancestors 'none'` stops other sites from framing the shell.
   - `Strict-Transport-Security` tells browsers to use HTTPS only, for a year (`HSTS_MAX_AGE` in `compose.yaml`). In development the age is 0: on `localhost` it would also force HTTPS on every other local project, and 0 makes browsers forget an earlier one.
   - `X-Content-Type-Options` and `Referrer-Policy` are standard hardening.
 - **`handle /bridge/*`** answers 404 from outside, because Tilbot reaches the bridge inside Docker.
+- **`@dashboards`** answers 404 for `/researcher/` and `/dashboard`, with a line saying where the dashboards are: on the researcher port.
 - **`handle /static/*`** serves CSS and images from the shared `static` volume, filled by `collectstatic`.
 - **The last `handle`** passes everything else to Django.
 - **`{$BOT_HOST} { … }`** is Tilbot's chat:
   - `frame-ancestors` lets only the shell show it.
   - `@public` lists the only paths participants need; everything else answers 404.
   - Inside `route`, the API, websocket and project files go to the backend, and pages go to the frontend.
-- **`:8081 { … }`** is the researcher port, on plain HTTP: the shell's researcher dashboard under `/researcher/` (with their CSS under `/static/`), and Tilbot complete with its dashboard for everything else. It is reachable only where a compose file publishes port 8081, which is `127.0.0.1` in development. The public shell site answers 404 for `/researcher/`.
+- **`:8081 { … }`** is the researcher port, on plain HTTP: the shell's researcher dashboard under `/researcher/` (with their CSS under `/static/`), and Tilbot complete with its dashboard for everything else. It is reachable only where a compose file publishes port 8081, which is `127.0.0.1` in development. The public shell site answers 404 for both dashboards.
 
 ## Words used in these docs
 

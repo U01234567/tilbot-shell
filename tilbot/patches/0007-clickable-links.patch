@@ -1,0 +1,30 @@
+diff --git a/frontend/src/lib/components/ChatMessage.svelte b/frontend/src/lib/components/ChatMessage.svelte
+index c13661f..ddd1dcc 100644
+--- a/frontend/src/lib/components/ChatMessage.svelte
++++ b/frontend/src/lib/components/ChatMessage.svelte
+@@ -17,6 +17,15 @@
+ 
+   let playingTTS: boolean = $state(false);
+ 
++  // Web addresses in a message become links that open in a new tab. The message is split into
++  // text and addresses, and Svelte shows each part as text: no HTML is ever built from a message.
++  // A full stop or bracket right after an address belongs to the sentence, not to the address.
++  const WEB_ADDRESS = /(https:\/\/[^\s<>"]*[^\s<>".,;:!?)])/;
++
++  function textAndLinks(content: string): string[] {
++    return content.split(WEB_ADDRESS); // odd positions hold the addresses
++  }
++
+   function determineLayout(author: string): [string, string] {
+     switch (author) {
+       case "bot":
+@@ -84,7 +93,8 @@
+           <SpeakerWave class="h-4 w-4 inline mr-2" onclick={doTTS} />
+         {/if}
+       {/if}
+-      {message.content}
++      <!-- on one line, so no spaces are added around a link -->
++      {#each textAndLinks(message.content) as part, i}{#if i % 2 === 1}<a class="underline" href={part} target="_blank" rel="noopener noreferrer">{part}</a>{:else}{part}{/if}{/each}
+       {#if message.image !== undefined}
+         <img src={URL.createObjectURL(message.image)} alt="Attachment to message" class="mt-2" />
+       {/if}

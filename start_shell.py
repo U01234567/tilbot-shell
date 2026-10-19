@@ -31,6 +31,8 @@ SECRETS = (
 DATA_SECRETS = {"POSTGRES_PASSWORD", "FIELD_ENCRYPTION_KEY"}
 DATABASE_VOLUME = "tilbot-shell_db"  # the "db" volume of compose project "tilbot-shell"
 CA_VOLUME = "tilbot-shell-caddy-ca"  # external in compose.yaml, so `down -v` keeps it
+# A study with a knowledge base answers questions (phase 3): only then does vector-similarity-intent run.
+KNOWLEDGE = ROOT / "project" / "knowledge.xlsx"
 STARTUP_SECONDS = 15  # long enough for a service that fails at start-up to have stopped or restarted
 
 # Where start_shell.py can't trust a certificate without your password, it shows the command instead.
@@ -132,7 +134,8 @@ def ensure_env() -> None:
 
 def compose(*args: str, capture: bool = False) -> str:
     require_docker()
-    command = ["docker", "compose", *compose_files(shell_env()), *args]
+    profiles = ["--profile", "phase3"] if KNOWLEDGE.exists() else []
+    command = ["docker", "compose", *compose_files(shell_env()), *profiles, *args]
     env = {**os.environ, **pinned_env(read_components())}
     result = subprocess.run(command, cwd=ROOT, env=env, check=True, capture_output=capture, text=True)
     return result.stdout
@@ -146,6 +149,10 @@ def up() -> None:
     if not (ROOT / "project").exists():
         shutil.copytree(ROOT / "project-example", ROOT / "project")
         print("Created project/ from project-example/. Replace the example content before real use.")
+    if not (ROOT / "project" / "project.toml").exists():
+        raise ValueError("project/ has no project.toml: put it back from your backup, or move project/ away to start again from project-example/")
+    if KNOWLEDGE.exists():
+        print("project/knowledge.xlsx found: phase 3 is on. Its first start downloads a language model (about 500 MB).")
     subprocess.run(["docker", "volume", "create", CA_VOLUME], capture_output=True, check=True)
     compose("up", "--build", "--detach")
     # Docker can't see a changed Caddyfile, so Caddy is told to read it again; running requests go on.

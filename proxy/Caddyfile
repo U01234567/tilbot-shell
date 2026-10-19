@@ -20,13 +20,14 @@
 		Referrer-Policy "same-origin"
 	}
 
-	# Tilbot calls /bridge/ inside the Docker network, and the researcher dashboard lives on the researcher port:
-	# from the public site neither exists.
+	# Tilbot calls /bridge/ inside the Docker network, and both dashboards live on the researcher port:
+	# from the public site none of them exists. For the dashboards, a hint says where they are.
 	handle /bridge/* {
 		respond 404
 	}
-	handle /researcher/* {
-		respond 404
+	@dashboards path /researcher /researcher/* /dashboard /dashboard/*
+	handle @dashboards {
+		respond "The dashboards are not on this site. On the computer that runs the shell, open http://127.0.0.1:8081/researcher/ (the participants' data) or http://127.0.0.1:8081/dashboard (Tilbot's projects)." 404
 	}
 	handle /static/* {
 		uri strip_prefix /static

@@ -26,4 +26,4 @@ repo = "https://github.com/tilbotio/vector-similarity-intent"
 commit = "838e038bef7279865563088240ed7965e8a06047"
 pinned_on = 2026-10-12
 patches = []
-note = "Used unchanged; we fork only if matching falls short on a real knowledge base. Not called yet: phase 3 is still a placeholder."
+note = "Used unchanged; we fork only if matching falls short on a real knowledge base. Called only by the shell, for phase 3, when project/knowledge.xlsx exists."

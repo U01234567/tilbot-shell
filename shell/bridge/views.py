@@ -2,7 +2,7 @@ from urllib.parse import urlencode
 
 from django.conf import settings
 from django.core import signing
-from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseForbidden, JsonResponse
+from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseForbidden, HttpResponseNotFound, JsonResponse
 from django.shortcuts import redirect, render
 from django.utils.crypto import constant_time_compare
 from django.views.decorators.csrf import csrf_exempt
@@ -11,9 +11,13 @@ from django.views.decorators.http import require_POST
 from accounts.session import signed_in_id
 from config.project import NO_TILBOT_PROJECT
 from bridge.tokens import make_token, read_token
-from records.models import Answer, TranscriptLine, latest_answers
+from records.models import Answer, Question, TranscriptLine, latest_answers
 from phase1_collect.rules import parse_answer, route_after
 from phase2_feedback.scoring import scale_score
+from phase3_questions import matching
+
+ANSWERED = "answered"  # Tilbot connector: show the answer, which comes as the connector's label
+UNKNOWN = "unknown"  # Tilbot connector: the knowledge base has no answer
 
 
 def chat(request):
@@ -94,3 +98,39 @@ def parse_seq(raw: str) -> int:
 
 def has_secret(request) -> bool:
     return constant_time_compare(request.POST.get("bridge_secret", ""), settings.BRIDGE_SECRET)
+
+
+@csrf_exempt  # called by Tilbot's server, not a browser; BRIDGE_SECRET and the token protect it
+@require_POST
+def ask(request):
+    """Answer one question from the knowledge base (phase 3), and keep what was asked.
+
+    Tilbot follows the connector "answered" and shows the answer text it gets as the connector's
+    label, or follows "unknown". Any error returns 4xx or 503, which makes Tilbot follow "else".
+    """
+    knowledge = settings.STUDY.knowledge
+    if not has_secret(request):
+        return HttpResponseForbidden()
+    if knowledge is None:
+        return HttpResponseNotFound("this study has no project/knowledge.xlsx")
+    try:
+        participant_id = read_token(request.POST["participant_id"])
+        question = request.POST["user_input"].strip()
+    except (KeyError, signing.BadSignature) as error:
+        return HttpResponseBadRequest(repr(error))
+    if not question:
+        return HttpResponseBadRequest("the question is empty")
+    entries = matching.by_phrasing(knowledge)
+    try:
+        phrasing = matching.closest_phrasing(question, list(entries), settings.INTENT_URL)
+    except (OSError, ValueError) as error:
+        return HttpResponse(f"vector-similarity-intent: {error!r}", status=503)
+    entry = entries.get(phrasing)
+    Question.objects.create(
+        participant_id=participant_id,
+        text=question if settings.STUDY.transcripts else "",
+        entry=entry.id if entry else "",
+    )
+    if entry is None:
+        return JsonResponse({"intent": UNKNOWN})
+    return JsonResponse({"intent": ANSWERED, "connector_label": matching.answer_text(entry)})

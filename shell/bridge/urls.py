@@ -6,4 +6,5 @@ urlpatterns = [
     path("chat", views.chat, name="chat"),
     path("bridge/save", views.save),
     path("bridge/log", views.log),
+    path("bridge/ask", views.ask),
 ]

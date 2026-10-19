@@ -10,7 +10,7 @@ from django.utils.timezone import localtime
 
 from accounts.models import Participant
 from phase2_feedback.scoring import scale_score, worth_discussing
-from records.models import Answer, TranscriptLine, latest_answers
+from records.models import Answer, Question, TranscriptLine, latest_answers
 
 
 def participant_label(participant, with_codes: bool, numbers: dict[int, int]) -> str:
@@ -57,9 +57,18 @@ def score_rows(with_codes: bool, numbers: dict[int, int]) -> list[list]:
     return rows
 
 
+def question_rows(with_codes: bool, numbers: dict[int, int]) -> list[list]:
+    """Phase 3: every question asked, and the knowledge base entry it was matched to (empty: none)."""
+    rows = [["participant", "question", "entry", "at"]]
+    for q in Question.objects.select_related("participant").order_by("at", "pk"):
+        rows.append([participant_label(q.participant, with_codes, numbers), q.text, q.entry, localtime(q.at).isoformat()])
+    return rows
+
+
 FILES = {
     "participants": participant_rows,
     "answers": answer_rows,
     "scores": score_rows,
+    "questions": question_rows,
     "transcripts": transcript_rows,
 }

@@ -6,3 +6,4 @@ django~=5.2.0             # the web framework; long-term support with security f
 psycopg[binary]~=3.2.0    # Django's driver for Postgres
 cryptography~=45.0.0      # encrypts answers and transcripts in the database (records/fields.py)
 gunicorn~=23.0.0          # runs Django in production
+openpyxl~=3.1.0           # reads the knowledge base, project/knowledge.xlsx (config/project.py)
