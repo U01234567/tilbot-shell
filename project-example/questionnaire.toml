@@ -1,4 +1,4 @@
-# Phase 1. The question texts live in Tilbot's editor; this file holds what the shell decides.
+# Phase 1. Tilbot asks the questions (its editor); this file holds what the shell decides.
 # Each Processing block "save" in Tilbot sends item = <id>. Every id used there must exist here.
 #
 # scale      the lowest and highest answer allowed; anything else makes Tilbot ask again
@@ -6,12 +6,16 @@
 # labels     optional: the words on the answer buttons, lowest answer first, one per answer on the scale,
 #            for example labels = ["Not at all", "A little", "Quite a bit", "Very much"] for scale = [1, 4].
 #            The buttons in Tilbot must say exactly these words; the shell stores the number.
+# text       optional: the question as Tilbot asks it. The results list it under the line it counts for, with
+#            the participant's answer; without it they show the id.
 
 [[items]]
 id = "Q01"
 scale = [0, 10]
+text = "How much does this example bother you?"
 threshold = 7
 
 [[items]]
 id = "Q02"
 scale = [0, 10]
+text = "And how much did it bother you yesterday?"

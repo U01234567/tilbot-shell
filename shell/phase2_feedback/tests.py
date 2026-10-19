@@ -85,16 +85,26 @@ def test_results_show_each_scale_with_the_latest_answers(client, signed_in):
     Answer.objects.create(participant=signed_in, item="Q09", value="1")
     answer_all(signed_in, Q09=4, Q06=2, Q07=2, Q29=4, Q30=4)  # this Q09 is the latest: it counts
     page = client.get("/results").content.decode()
-    assert page.count("<hr>") == 3 and "Name of qol" in page
-    assert page.count("&lt;worth_discussing&gt;") == 1  # pain: (4 + 1) / 2, not (1 + 1) / 2
+    assert page.count('<section class="scale') == 3 and "Name of qol" in page
+    assert page.count('class="status worth"') == 1  # pain: (4 + 1) / 2, not (1 + 1) / 2
+    assert page.count('class="status fine"') == 1  # role; qol has no threshold, so no word
     assert 'class="fill worth"' in page and page.count('class="fill fine"') == 1
 
 
-def test_the_track_shows_where_a_score_is_worth_discussing(client, signed_in):
-    answer_all(signed_in)
+def test_each_bar_lists_the_questions_and_answers_it_is_based_on(client, signed_in, settings):
+    items = {**ITEMS, "Q09": Item("Q09", 1, 4, None, ("No", "A bit", "Quite", "Very"), "Any pain?")}
+    settings.STUDY = dataclasses.replace(settings.STUDY, items=items)
+    answer_all(signed_in, Q09=3, Q19=2)
     page = client.get("/results").content.decode()
-    assert '<rect class="worth-zone" x="0" y="0" width="58"' in page  # role: higher is better, below 58
-    assert '<rect class="worth-zone" x="25" y="0" width="75"' in page  # pain: higher is worse, above 25
+    assert "<li>Any pain? <b>Quite</b></li><li>Q19 <b>2</b></li>" in page  # no text, no labels: id and number
+
+
+def test_every_line_runs_from_worse_to_better(client, signed_in):
+    answer_all(signed_in, Q06=2, Q07=2)  # role 66.7, pain 0 (no pain: the best), qol 0 (the worst)
+    page = client.get("/results").content.decode()
+    assert '<rect class="fine-zone" x="58"' in page and 'cx="66.66' in page  # role: higher is better, as is
+    assert '<rect class="fine-zone" x="75"' in page and 'cx="100.0"' in page  # pain: turned around
+    assert '<circle class="fill" cx="0.0"' in page  # qol: no threshold, a neutral dot
 
 
 def test_no_results_before_every_item_is_answered(client, signed_in):
@@ -106,7 +116,7 @@ def test_no_results_before_every_item_is_answered(client, signed_in):
 def test_bars_use_a_decimal_point_in_every_language(client, signed_in, settings):
     settings.LANGUAGE_CODE = "nl"
     answer_all(signed_in, Q09=2, Q19=2)
-    assert 'width="33.33' in client.get("/results").content.decode()
+    assert 'cx="66.66' in client.get("/results").content.decode()  # pain 33.3, turned around
 
 
 def test_chat_page_offers_the_results_once_every_item_is_answered(client, signed_in, settings):

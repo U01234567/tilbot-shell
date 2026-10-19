@@ -22,11 +22,19 @@ def test_labels_must_match_the_scale():
         parse_item({"id": "Q09", "scale": [1, 4], "labels": ["No", "Yes"]})
 
 
+def test_an_answer_is_shown_in_the_words_of_its_button():
+    item = parse_item({"id": "Q09", "scale": [1, 4], "labels": ["No", "A bit", "Quite", "Very"], "text": "Pain?"})
+    assert (item.text, item.answer_word(3)) == ("Pain?", "Quite")
+    assert parse_item({"id": "Q01", "scale": [0, 10]}).answer_word(7) == "7"
+
+
 def test_a_scale_needs_known_items_and_a_direction():
     with pytest.raises(ValueError, match="Q99"):
         parse_scale({"id": "pain", "name": "Pain", "items": ["Q99"], "higher": "worse"}, ["Q09"])
     with pytest.raises(ValueError, match="better"):
         parse_scale({"id": "pain", "name": "Pain", "items": ["Q09"], "higher": "up"}, ["Q09"])
+    with pytest.raises(ValueError, match="two ends"):
+        parse_scale({"id": "pain", "name": "Pain", "items": ["Q09"], "higher": "worse", "ends": ["Bad"]}, ["Q09"])
     with pytest.raises(ValueError, match="0 to 100"):
         parse_scale({"id": "pain", "name": "Pain", "items": ["Q09"], "higher": "worse", "threshold": 250}, ["Q09"])
 

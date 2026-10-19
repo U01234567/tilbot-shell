@@ -2,7 +2,8 @@
 
 project.toml holds what the research team checks and edits: sign-up limits and options, every text
 the participant sees (so each study picks its own language), and the Tilbot project.
-questionnaire.toml holds, per item, the answer scale, the answer words and the threshold for follow-ups.
+questionnaire.toml holds, per item, the answer scale, the answer words, the threshold for follow-ups
+and the question text for the results.
 feedback.toml, if the study has one, holds the scales and texts of the participant's results (phase 2).
 knowledge.xlsx, if the study has one, holds the questions and answers of phase 3.
 A mistake in any of them stops the shell with an error that names the problem.
@@ -25,6 +26,11 @@ class Item:
     scale_max: int
     threshold: int | None  # an answer at or above this leads to follow-ups; None: never
     labels: tuple[str, ...] = ()  # the answer buttons' words, lowest answer first; empty: numbers
+    text: str = ""  # the question as Tilbot asks it, listed under the results; empty: the id
+
+    def answer_word(self, value: int) -> str:
+        """The word on the button for this answer, or the number when the item has no labels."""
+        return self.labels[value - self.scale_min] if self.labels else str(value)
 
 
 @dataclass(frozen=True)
@@ -37,6 +43,7 @@ class Scale:
     higher: str  # "better" or "worse": what a higher score means for the participant
     reverse: bool  # True when a high answer on the items means a low score
     threshold: float | None  # worth discussing below this ("better") or above it ("worse"); None: never
+    ends: tuple[str, ...] = ()  # the words under the line's left (worse) and right (better) end; empty: none
 
 
 @dataclass(frozen=True)
@@ -66,7 +73,7 @@ TEXT_KEYS = (
     "sign_out_check", "stay",
 )
 # Every text of the results panel. feedback.toml must define each one under [texts].
-FEEDBACK_TEXT_KEYS = ("results", "intro", "worth_discussing", "none", "back")
+FEEDBACK_TEXT_KEYS = ("results", "intro", "worth_discussing", "fine", "none", "back")
 HIGHER = ("better", "worse")
 # The columns of knowledge.xlsx, in its first row. topic, phrasings and link may stay empty.
 KNOWLEDGE_COLUMNS = ("id", "topic", "question", "phrasings", "answer", "link")
@@ -125,7 +132,10 @@ def parse_item(raw: dict) -> Item:
     answers = scale_max - scale_min + 1
     if labels and len(labels) != answers:
         raise ValueError(f"questionnaire.toml: {raw['id']} has {len(labels)} labels for {answers} answers")
-    return Item(id=raw["id"], scale_min=scale_min, scale_max=scale_max, threshold=raw.get("threshold"), labels=labels)
+    return Item(
+        id=raw["id"], scale_min=scale_min, scale_max=scale_max, threshold=raw.get("threshold"), labels=labels,
+        text=raw.get("text", ""),
+    )
 
 
 def load_feedback(path: Path, item_ids: list[str]) -> Feedback | None:
@@ -153,6 +163,8 @@ def parse_scale(raw: dict, item_ids: list[str]) -> Scale:
         raise ValueError(f"feedback.toml: scale {raw['id']} needs higher = \"better\" or \"worse\"")
     if not 0 <= raw.get("threshold", 0) <= 100:
         raise ValueError(f"feedback.toml: scale {raw['id']} needs a threshold from 0 to 100, like its score")
+    if len(raw.get("ends", ["worse", "better"])) != 2:
+        raise ValueError(f"feedback.toml: scale {raw['id']} needs two ends: the worse one, then the better one")
     return Scale(
         id=raw["id"],
         name=raw["name"],
@@ -160,6 +172,7 @@ def parse_scale(raw: dict, item_ids: list[str]) -> Scale:
         higher=raw["higher"],
         reverse=raw.get("reverse", False),
         threshold=raw.get("threshold"),
+        ends=tuple(raw.get("ends", ())),
     )
 
 

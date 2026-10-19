@@ -17,22 +17,32 @@ def results(request):
     feedback = settings.STUDY.feedback
     if participant_id is None or feedback is None:
         raise Http404
+    items = settings.STUDY.items
     answers = latest_answers(participant_id)
     bars = []
-    if questionnaire_done(settings.STUDY.items, answers):
+    if questionnaire_done(items, answers):
         for scale in feedback.scales:
-            score = scale_score(scale, settings.STUDY.items, answers)
+            score = scale_score(scale, items, answers)
             if score is not None:  # a scale with too few answers is left out
-                bars.append(bar(scale, score))
+                bars.append(bar(scale, score, given(scale, items, answers)))
     return render(request, "phase2_feedback/results.html", {"texts": feedback.texts, "bars": bars})
 
 
-def bar(scale, score: float) -> dict:
-    """What the template needs to draw one scale on a 0–100 track: the score, whether it is worth
-    discussing, and the two parts of the track, each as (where it starts, how wide)."""
-    drawing = {"scale": scale, "score": score, "flag": worth_discussing(scale, score)}
+def given(scale, items, answers) -> list[tuple[str, str]]:
+    """The questions a scale is based on, each with the participant's answer in the words of its button."""
+    return [(items[i].text or i, items[i].answer_word(answers[i])) for i in scale.items if i in answers]
+
+
+def bar(scale, score: float, answers: list[tuple[str, str]]) -> dict:
+    """What the template needs to draw one scale: a line from worse (left, 0) to better (right, 100), whatever
+    the scale's own direction, with a dot at the participant's place and, when the scale has a threshold, the
+    place of the threshold on it. Plus whether the score is worth discussing, and the answers behind it."""
+    drawing = {"scale": scale, "flag": worth_discussing(scale, score), "answers": answers, "at": better_is_right(scale, score)}
     if scale.threshold is None:
         return drawing
-    below, above = (0, scale.threshold), (scale.threshold, 100 - scale.threshold)
-    worth, fine = (below, above) if scale.higher == "better" else (above, below)
-    return {**drawing, "worth_zone": worth, "fine_zone": fine}
+    return {**drawing, "limit": better_is_right(scale, scale.threshold)}
+
+
+def better_is_right(scale, value: float) -> float:
+    """A score's place on the line, where right is always better: so every line reads the same way."""
+    return value if scale.higher == "better" else 100 - value

@@ -5,18 +5,21 @@
 
 [texts]
 results = "Your results"   # the panel's title, and the button that opens it again
-intro = "This is how the past week went for you."
-worth_discussing = "Worth discussing"   # the label on an orange bar
+intro = "This is how the past week went for you, from your answers."
+worth_discussing = "Worth discussing"   # the word on a scale past its threshold
+fine = "Going well"   # the word on a scale within its threshold
 none = "There are no results yet: answer all the questions first."
-back = "Back to the chat"   # shown on phones, where the results cover the chat
+back = "Back to the chat"   # what the × that closes the panel says to screen readers
 
-# One [[scales]] per bar. The bar is green when the score is fine and orange past the threshold;
-# the track behind it shows both zones, with a thick line at the threshold.
+# One [[scales]] per card. Each card shows a line from worse (left) to better (right), whatever the scale's
+# direction, with a dot where the participant is: light orange up to the threshold, light green after it.
+# Under it, the scale's questions with the participant's answers (their text comes from questionnaire.toml).
 # items      ids from questionnaire.toml; a scale is shown once at least half of them are answered
 # higher     "better" or "worse": what a higher score means for the participant
 # reverse    true when a high answer on the items means a low score (for example "trouble walking" on a
 #            scale of functioning); leave it out otherwise
 # threshold  optional, 0–100: worth discussing below it (higher = "better") or above it (higher = "worse")
+# ends       optional: the words under the left (worse) and right (better) end of the line
 # The score is the mean of the answers' places on their scales, times 100: the EORTC QLQ-C30 method.
 
 [[scales]]
@@ -25,3 +28,4 @@ name = "Example scale"
 items = ["Q01", "Q02"]
 higher = "worse"
 threshold = 50
+ends = ["Bothers me a lot", "Doesn't bother me"]

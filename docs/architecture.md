@@ -25,7 +25,7 @@ How the parts fit together, where everything lives, and the contract between the
 - **The shell is the hub.** Tilbot only calls the shell, and only the shell calls the vector-similarity-intent service.
 - **Participants see two sites.** The shell at `SHELL_HOST` handles sign-up, sign-in and the chat page. Tilbot at `BOT_HOST` is only ever shown inside the shell's chat page, in an iframe.
 - **Tilbot's researcher dashboard is not public.** It sits on port 8081, which only `compose.dev.yaml` publishes, and only to `127.0.0.1`.
-- **The shell's pages look like Tilbot, on a light purple background.** That background and the white cards (`shell/static/css/shell.css`) mark every page the shell serves, and so controls and secures; what shows without it is Tilbot's (its dashboard, and the chat inside the iframe). The researcher pages always carry the mark `tilbot-shell <version> · researcher` and never take the study's colours. The participant pages take the study's colours from `project/theme/tokens.css`, and carry the mark `· development` only while `SHELL_ENV=development`: participants of a real study never see the software's name.
+- **The shell's pages look like Tilbot, on a light purple background.** That background and the white cards (`shell/static/css/shell.css`) mark every page the shell serves, and so controls and secures; what shows without it is Tilbot's (its dashboard, and the chat inside the iframe). The researcher pages always carry the mark `tilbot-shell <version> · researcher` and never take the study's colours. The participant pages take the study's colours from `project/theme/tokens.css`, and carry the mark `· development` only while `SHELL_ENV=development`: participants of a real study never see the software's name. The chat inside the iframe can take the study's look too, from `project/theme/tilbot.css` (patch 0009).
 
 ## Where everything goes
 
@@ -71,6 +71,7 @@ Each patch is one concern, applied to the pinned commit at build time (`tilbot/p
 | `0006-admin-password` | the first admin password comes from `.env`; Tilbot refuses to create the account without one | no `admin`/`admin` default |
 | `0007-clickable-links` | web addresses (`https://…`) in chat messages become links that open in a new tab | the message is split into text and addresses and shown as text: no HTML is built from it |
 | `0008-dashboard-icons` | the dashboard's Delete and Import icons find their project also when the click lands on a line of the icon | a bug fix: before, deleting a project often did nothing |
+| `0009-study-theme` | Tilbot's pages load `/study-theme/tilbot.css` after their own styles: the study's `project/theme/tilbot.css`, served by Caddy on `BOT_HOST` | the chat can take the study's colours and font without changing Tilbot's code; a study without the file keeps Tilbot's look |
 
 ## The bridge contract
 
@@ -137,7 +138,7 @@ The save calls only work in a chat opened from the shell's chat page, because on
 
 ## Phase 2: the results
 
-A study with `project/feedback.toml` shows the participant's results in a panel beside the chat, once every item is answered. The panel is kept simple: a title, one sentence, and per scale its name and one bar, separated by lines. The track behind each bar is light green where a score is fine and light orange where it is worth discussing, with a thick line at the threshold; the bar itself is green or orange as a whole, and an orange one gets a label. A scale without a threshold gets a neutral bar. The file lists the scales (which items, which direction, the threshold) and the few texts; `project-example/feedback.toml` explains each line. The shell scores each scale from the latest answers: the mean of the answers' places on their scales, times 100, turned around for a `reverse` scale, once at least half of its items are answered. That is the EORTC QLQ-C30 method.
+A study with `project/feedback.toml` shows the participant's results in a panel beside the chat, once every item is answered. The panel is kept simple: a title, one sentence, and per scale a card with its name, a word for how it went (`worth_discussing` or `fine`), one line and the answers behind it. Every line runs from worse (left) to better (right), whatever the scale's own direction, with the words of its `ends` underneath and a dot where the participant is; it is light orange up to the threshold and light green after it, with a thin mark at the threshold. A card worth discussing gets an orange edge; a scale without a threshold gets a neutral dot and no word. Under the line, the scale's questions (their `text` in `questionnaire.toml`) with the participant's answers, in the words of the buttons. No score is shown; the export has them, in their official direction. The file lists the scales (which items, which direction, the threshold) and the few texts; `project-example/feedback.toml` explains each line. The shell scores each scale from the latest answers: the mean of the answers' places on their scales, times 100, turned around for a `reverse` scale, once at least half of its items are answered. That is the EORTC QLQ-C30 method.
 
 **Opening the results from the flowchart:** on the connector where the results should open (usually after the last save), add an event of the type "Message to parent window", with the message `show_results` and no parameters. Tilbot passes it to the chat page, which checks that it comes from Tilbot's own frame and then loads `/results` from the shell. Participants can open the results again with the button below the chat, which shows once every item is answered.
 
@@ -180,10 +181,11 @@ The shell keeps every question with the entry it was matched to (table `records_
   - `X-Content-Type-Options` and `Referrer-Policy` are standard hardening.
 - **`handle /bridge/*`** answers 404 from outside, because Tilbot reaches the bridge inside Docker.
 - **`@dashboards`** answers 404 for `/researcher/` and `/dashboard`, with a line saying where the dashboards are: on the researcher port.
-- **`handle /static/*`** serves CSS and images from the shared `static` volume, filled by `collectstatic`.
+- **`handle /static/*`** serves CSS and images from the shared `static` volume, filled by `collectstatic`. `Cache-Control: no-cache` makes the browser ask each time whether a file changed (a short "not modified" when it didn't), so after an update nobody sees the old CSS.
 - **The last `handle`** passes everything else to Django.
 - **`{$BOT_HOST} { … }`** is Tilbot's chat:
   - `frame-ancestors` lets only the shell show it.
+  - `handle_path /study-theme/*` serves the study's `project/theme/` folder (as collected into the `static` volume), so Tilbot's pages can load `tilbot.css` and the fonts next to it (patch 0009).
   - `@public` lists the only paths participants need; everything else answers 404.
   - Inside `route`, the API, websocket and project files go to the backend, and pages go to the frontend.
 - **`:8081 { … }`** is the researcher port, on plain HTTP: the shell's researcher dashboard under `/researcher/` (with their CSS under `/static/`), and Tilbot complete with its dashboard for everything else. It is reachable only where a compose file publishes port 8081, which is `127.0.0.1` in development. The public shell site answers 404 for both dashboards.

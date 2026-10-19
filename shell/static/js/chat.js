@@ -51,7 +51,7 @@ addEventListener("beforeunload", (event) => {
 
 document.addEventListener("click", (event) => {
   if (event.target.closest("[data-results-open]")) {
-    showResults();
+    results.hidden ? showResults() : hideResults(); // the button below the chat opens and closes the panel
   } else if (event.target.closest("[data-results-back]")) {
     hideResults();
   } else if (event.target.closest("[data-sign-out]")) {

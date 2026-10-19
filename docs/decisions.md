@@ -181,13 +181,15 @@ The catch: the two passwords are stored apart, so changing one in a dashboard le
 
 ## Results beside the chat, drawn by the shell
 
-Phase 2 shows each scale of `project/feedback.toml` as a bar from 0 to 100, once every item is answered. Since 19 October 2026 the panel is kept simple for the proof of concept: per scale its name and one bar, green or orange as a whole, on a track that is light green where a score is fine and light orange where it is worth discussing, with a thick line at the threshold, and a label on an orange bar. The shell draws it (SVG, no chart library) in a panel beside the chat, over it on a phone, and the chat keeps running underneath. The flowchart opens it with Tilbot's own "Message to parent window" event, so Tilbot needs no patch, and the results never pass through Tilbot: the panel fetches them from the shell with the participant's session. Scores keep their official direction (higher is better for functioning, worse for complaints); the colours of the track show which side is which.
+Phase 2 shows each scale of `project/feedback.toml` (a score from 0 to 100), once every item is answered. Since 19 October 2026 the panel is kept simple and is meant to read without explanation: per scale a card with its name, a word ("worth discussing" or "going well"), and one line from worse to better with a dot where the participant is: light orange up to the threshold, light green after it, with the scale's own words at both ends ("a lot of pain" … "no pain"). Under the line, the questions it is based on, each with the participant's own answer (the question's `text` in `questionnaire.toml`), so every dot maps visibly onto what they just answered; a scale of several items shows all of them. A × closes the panel. The shell draws it (SVG, no chart library) in a panel beside the chat, over it on a phone, and the chat keeps running underneath. The flowchart opens it with Tilbot's own "Message to parent window" event, so Tilbot needs no patch, and the results never pass through Tilbot: the panel fetches them from the shell with the participant's session. Every line reads the same way, better to the right, so a patient learns it once; the panel shows no numbers, so nothing contradicts the export, where scores keep their official direction (higher is better for functioning, worse for complaints).
 
 - **A separate results page.** Simpler, but leaving the chat page ends the conversation: Tilbot starts again from the top when its frame reloads.
-- **Results as chat messages.** Tilbot shows text only, so no bars, and the texts would travel through Tilbot.
-- **Flip complaints so a longer bar is always better.** Easier to read at a glance, but the patient would see a different number than the export and the literature. Colour, label and the sentence above each group carry the meaning instead.
+- **Results as chat messages.** Tilbot shows text only, so no lines, and the texts would travel through Tilbot.
+- **Each line in the scale's official direction.** Matches the literature, but a patient has to work out per scale which side is good; with no numbers on the panel, nothing is lost by turning complaints around.
+- **A bar from 0 instead of a dot.** A bar's length reads as "how much", which means trouble for pain and the opposite for functioning; a dot on a line between two named ends reads as "where I am".
 - **More on the panel: a sentence and a definition per scale, groups, an explanation of the line, a print button.** Built first, then left out: participants were given too much at once.
-- **Colour per zone of the bar** (the part past the threshold orange). On a scale where higher is better, a fine score would still show orange below the line, so the bar takes one colour and the track shows the zones.
+- **One line per question instead of per scale.** Maps one to one onto the chat, but the thresholds belong to the scales (as in the literature), so per-question bars would need thresholds nobody published. A study that wants it can make each item its own scale in `feedback.toml`, without code.
+- **Colour per zone of the bar** (the part past the threshold orange). On a scale where higher is better, a fine score would still show orange below the line, so the dot takes one colour and the line shows the zones.
 
 ## Phase 3: answers from the study's own knowledge base
 
@@ -229,7 +231,7 @@ Every chat starts with a call from Tilbot to the shell (`/bridge/status`): a par
 - **The shell picks a different Tilbot project for returning participants.** No flowchart change, but two projects to keep in step.
 - **Ask everything again.** Simplest, but the participant repeats work, and the latest answers would replace the first.
 
-## Known gaps in version 0.12
+## Known gaps in version 0.13
 
 - **Not built yet:** status and logs in the researcher dashboard, backups on a schedule, running on a server, and several versions of a chatbot side by side (participants divided over Tilbot projects).
 - **A participant can't do the questionnaire again** once every item is answered.

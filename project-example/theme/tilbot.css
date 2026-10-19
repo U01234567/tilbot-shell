@@ -1,0 +1,13 @@
+/* The study's look inside Tilbot's chat (the frame on the chat page). Tilbot loads this file after its own
+   styles (tilbot/patches/0009), so a rule here wins. It uses Tilbot's own class names, which a new Tilbot
+   version can change: keep it to colours and the font. Empty: the chat keeps Tilbot's look.
+   A font or image next to this file can be used, for example url("MyFont.ttf").
+
+   Examples (start each rule with "html" so it wins over Tilbot's):
+   html .chat-bubble.bg-tilbot-secondary-purple { background-color: #f4f4f4; color: #1d1d1b; }  the bot's messages
+   html .chat-bubble.bg-tilbot-secondary-hardpink { background-color: #6a2c9e; color: #ffffff; }  the participant's
+   html .btn-outline { color: #6a2c9e; border-color: #6a2c9e; }                                   answer buttons
+   html .btn-outline:hover { color: #ffffff; background-color: #6a2c9e; border-color: #6a2c9e; }
+   html .btn-circle:not(.btn-disabled) { color: #ffffff; background-color: #6a2c9e; border-color: #6a2c9e; }  send
+   html body { font-family: "My Font", system-ui, sans-serif; }
+*/

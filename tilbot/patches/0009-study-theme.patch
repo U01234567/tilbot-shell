@@ -1,0 +1,13 @@
+diff --git a/frontend/src/app.html b/frontend/src/app.html
+index 6a7831e..7a24d6a 100644
+--- a/frontend/src/app.html
++++ b/frontend/src/app.html
+@@ -5,6 +5,8 @@
+ 		<link rel="icon" href="%sveltekit.assets%/favicon.png" />
+ 		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, interactive-widget=resizes-content" />
+ 		%sveltekit.head%
++		<!-- The study's look for the chat (tilbot-shell: project/theme/tilbot.css); after Tilbot's own styles, so it wins. -->
++		<link rel="stylesheet" href="/study-theme/tilbot.css" />
+ 	</head>
+ 	<body class="w-full h-full overflow-x-hidden">
+ 		<div class="w-full h-full">%sveltekit.body%</div>
