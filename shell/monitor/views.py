@@ -27,7 +27,7 @@ def overview(request):
 
 @login_required
 def export(request):
-    """A zip of three CSV files, with the participants' codes or with numbers instead (export.py)."""
+    """A zip of four CSV files, with the participants' codes or with numbers instead (export.py)."""
     if request.method != "POST":
         return render(request, "monitor/export.html")
     with_codes = request.POST.get("codes") == "with"

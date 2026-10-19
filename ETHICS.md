@@ -43,6 +43,12 @@ messages from Tilbot; those logs live on the machine and are not kept after the 
 The chat page passes Tilbot a signed token that names the participant's row number in the database,
 never the code. Anyone who reads the page's address sees that number. It cannot be forged.
 
+If the study has `feedback.toml`, the participant sees their own results beside the chat: a score per
+scale, computed from their latest answers each time the results open, and never stored. Only the signed-in
+participant can load their results; Tilbot only sends the signal to open them and never sees the scores.
+Whether a result is shown as "worth discussing" comes from the thresholds the study chose; how that is
+worded, so that it never reads as a diagnosis, is the study's responsibility (`project/README.md`).
+
 ## Where the data lives
 
 Everything is stored in Docker volumes on the machine that runs the shell. During development this is
@@ -66,7 +72,7 @@ this has to be fixed before phase 3 is used with real participants.
 ## What leaves the machine
 
 - **No participant data**, except backups and exports made by the team. An export (researcher dashboard)
-  contains answers and transcripts decrypted, with either the participants' codes or numbers instead;
+  contains answers, scale scores and transcripts decrypted, with either the participants' codes or numbers instead;
   the page explains the difference. Where exports are kept is the study's decision (`project/README.md`).
 - At build time the machine downloads code and images: Tilbot and vector-similarity-intent from
   GitHub, container images from Docker Hub, Python packages from PyPI, Node packages from npm, and

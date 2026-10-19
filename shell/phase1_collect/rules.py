@@ -5,8 +5,14 @@ HIGH = "high"  # Tilbot connector: this item's follow-up questions
 
 
 def parse_answer(item: Item, raw: str) -> int:
-    """Return the answer as a number on the item's scale; raise ValueError otherwise."""
-    value = int(raw)
+    """Return the answer as a number on the item's scale, given as a number or as one of the item's labels.
+
+    Raise ValueError for anything else.
+    """
+    text = raw.strip()
+    if text in item.labels:
+        return item.scale_min + item.labels.index(text)
+    value = int(text)
     if not item.scale_min <= value <= item.scale_max:
         raise ValueError(f"{item.id}: {value} is not on the scale {item.scale_min}-{item.scale_max}")
     return value

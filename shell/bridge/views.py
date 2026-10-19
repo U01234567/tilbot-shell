@@ -11,8 +11,9 @@ from django.views.decorators.http import require_POST
 from accounts.session import signed_in_id
 from config.project import NO_TILBOT_PROJECT
 from bridge.tokens import make_token, read_token
-from records.models import Answer, TranscriptLine
+from records.models import Answer, TranscriptLine, latest_answers
 from phase1_collect.rules import parse_answer, route_after
+from phase2_feedback.scoring import scale_score
 
 
 def chat(request):
@@ -26,7 +27,20 @@ def chat(request):
         "pid": make_token(participant_id),
         "show_header": 0,
     })
-    return render(request, "bridge/chat.html", {"bot_url": f"{settings.BOT_URL}/?{query}"})
+    return render(request, "bridge/chat.html", {
+        "bot_url": f"{settings.BOT_URL}/?{query}",
+        "bot_origin": settings.BOT_URL,
+        "has_results": has_results(participant_id),
+    })
+
+
+def has_results(participant_id: int) -> bool:
+    """Whether the results panel has something to show yet, so the chat page can offer a button for it."""
+    feedback = settings.STUDY.feedback
+    if feedback is None:
+        return False
+    answers = latest_answers(participant_id)
+    return any(scale_score(scale, settings.STUDY.items, answers) is not None for scale in feedback.scales)
 
 
 @csrf_exempt  # called by Tilbot's server, not a browser; BRIDGE_SECRET and the token protect it

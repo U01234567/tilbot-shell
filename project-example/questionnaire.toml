@@ -3,6 +3,9 @@
 #
 # scale      the lowest and highest answer allowed; anything else makes Tilbot ask again
 # threshold  an answer at or above this leads to the item's follow-up questions; leave it out for none
+# labels     optional: the words on the answer buttons, lowest answer first, one per answer on the scale,
+#            for example labels = ["Not at all", "A little", "Quite a bit", "Very much"] for scale = [1, 4].
+#            The buttons in Tilbot must say exactly these words; the shell stores the number.
 
 [[items]]
 id = "Q01"

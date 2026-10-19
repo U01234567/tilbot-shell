@@ -24,3 +24,16 @@ def test_parse_answer_refuses_everything_else(raw):
 )
 def test_route_after(item, value, connector):
     assert route_after(item, value) == connector
+
+
+WORDS = Item(id="Q09", scale_min=1, scale_max=4, threshold=3, labels=("Not at all", "A little", "Quite a bit", "Very much"))
+
+
+@pytest.mark.parametrize("raw, value", [("Not at all", 1), ("Quite a bit", 3), (" Very much ", 4), ("2", 2)])
+def test_parse_answer_accepts_the_labels(raw, value):
+    assert parse_answer(WORDS, raw) == value
+
+
+def test_parse_answer_refuses_an_unknown_word():
+    with pytest.raises(ValueError):
+        parse_answer(WORDS, "Quite")

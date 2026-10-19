@@ -1,7 +1,6 @@
-"""Phase 2, feedback (not built yet): what the participant's answers mean.
+"""Phase 2, feedback: the participant's results, shown beside the chat.
 
-Will hold: scores from the stored answers, and feedback modules that turn them into output:
-sentences, a narrative with placeholders (templates in project/feedback/), and charts drawn as
-SVG on the chat page. Like phase 1, the rules are pure functions; Tilbot asks for the
-feedback through a Processing block.
+scoring.py turns the answers into scale scores (pure functions); views.py draws them as bars, which
+Tilbot's flowchart opens with a "Message to parent window" event, show_results (static/js/chat.js).
+The scales and texts come from project/feedback.toml.
 """

@@ -41,12 +41,12 @@ How the parts fit together, where everything lives, and the contract between the
 | `vector-similarity-intent/Dockerfile` | builds the intent service at the pinned commit | it changes how it builds |
 | `vector-similarity-intent/patches/` | our changes to it, same rules; empty for now | it lacks something we need |
 | `shell/config/` | Django settings, URLs, the study loader (`project.py`) | adding a setting or an app |
-| `shell/templates/`, `shell/static/` | shared page layout and the shell's CSS | changing the look of every page |
+| `shell/templates/`, `shell/static/` | shared page layout, the shell's CSS, and `js/chat.js` (opens the results) | changing the look of every page |
 | `shell/accounts/` | participant codes, sign-up, sign-in, lockout | changing how participants get in |
 | `shell/records/` | answers and transcripts, encrypted | storing a new kind of participant data |
 | `shell/bridge/` | the chat page and the endpoints Tilbot calls | changing the contract with Tilbot |
 | `shell/phase1_collect/` | rules after each answer: valid? follow-ups? | changing how answers are judged |
-| `shell/phase2_feedback/` | feedback (placeholder) | building phase 2 |
+| `shell/phase2_feedback/` | the results: scale scores (`scoring.py`, pure functions) and the panel beside the chat | changing how results are scored or shown |
 | `shell/phase3_questions/` | questions answered from the knowledge base (placeholder) | building phase 3 |
 | `shell/monitor/` | the researcher dashboard: counts, and the data export (`export.py` turns the tables into CSV rows) | adding a researcher page |
 | `project-example/` | the shape of `project/`, with dummy content | the project format changes |
@@ -112,7 +112,7 @@ Open the editor from Tilbot's dashboard, with the pencil icon next to the projec
 
 **Per question:**
 
-1. **An MC block with the question.** Give it one connector per answer option on the item's scale (for a 0–10 item: `0` to `10`), all pointing to step 2.
+1. **An MC block with the question.** Give it one connector per answer option on the item's scale, all pointing to step 2. The connector labels are the numbers (for a 0–10 item: `0` to `10`), or exactly the words in the item's `labels` in `questionnaire.toml` (for example `Not at all` to `Very much`); the shell turns the words into numbers.
 2. **A Processing block "save Q01".** It uses the external link `shell-save`, with one parameter: `item` = `Q01`. Its connectors:
    - `saved` → the next question
    - `high` → this item's follow-up blocks, which end at the next question
@@ -123,6 +123,16 @@ Tilbot follows *else* when a call fails, so a failed save can never move on sile
 Labels match on "contains", so `saved` and `high` must never be part of another label on the same block.
 
 The save calls only work in a chat opened from the shell's chat page, because only that page gives Tilbot a participant token. In the editor's simulator every save goes to *else*. For the same reason the dot on Settings turns red: the editor can't reach the shell, which is expected.
+
+`project-example/tilbot/example.tilbot` is all of the above, ready to import, ending with the results below.
+
+## Phase 2: the results
+
+A study with `project/feedback.toml` shows the participant's results in a panel beside the chat. The file lists the scales (which items, which direction, the threshold) and every text; `project-example/feedback.toml` explains each line. The shell scores each scale from the latest answers: the mean of the answers' places on their scales, times 100, turned around for a `reverse` scale, once at least half of its items are answered. That is the EORTC QLQ-C30 method.
+
+**Opening the results from the flowchart:** on the connector where the results should open (usually after the last save), add an event of the type "Message to parent window", with the message `show_results` and no parameters. Tilbot passes it to the chat page, which checks that it comes from Tilbot's own frame and then loads `/results` from the shell. Participants can open the results again with the button below the chat, once there is something to show.
+
+Nothing about the results passes through Tilbot: the message carries no data, and `/results` answers only a signed-in participant, with their own answers.
 
 ## The Caddyfile, line by line
 

@@ -1,13 +1,22 @@
 {% extends "base.html" %}
+{% load static %}
 {% block page_class %}{% if bot_url %}chat{% else %}page{% endif %}{% endblock %}
 {% block content %}
   {% if bot_url %}
-    <iframe src="{{ bot_url }}" title="{{ study.name }}"></iframe>
+    <iframe src="{{ bot_url }}" title="{{ study.name }}" data-origin="{{ bot_origin }}"></iframe>
+    {% if study.feedback %}
+      {# Filled and shown by static/js/chat.js when the flowchart says show_results, or the button below is used. #}
+      <section id="results" class="results" data-url="{% url 'results' %}" hidden></section>
+      <script src="{% static 'js/chat.js' %}" defer></script>
+    {% endif %}
   {% else %}
     <p class="notice">No Tilbot project is linked yet. Put its id in project/project.toml and restart the shell (docs/operations.md).</p>
   {% endif %}
-  <form class="sign-out" method="post" action="{% url 'sign_out' %}">
-    {% csrf_token %}
-    <button type="submit" class="quiet">{{ study.texts.sign_out }}</button>
-  </form>
+  <div class="chat-bar">
+    {% if has_results %}<button type="button" class="quiet" data-results-open>{{ study.feedback.texts.results }}</button>{% endif %}
+    <form class="sign-out" method="post" action="{% url 'sign_out' %}">
+      {% csrf_token %}
+      <button type="submit" class="quiet">{{ study.texts.sign_out }}</button>
+    </form>
+  </div>
 {% endblock %}

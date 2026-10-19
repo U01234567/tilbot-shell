@@ -1,4 +1,5 @@
 import csv
+import dataclasses
 import io
 import zipfile
 
@@ -7,6 +8,7 @@ from django.contrib.auth.models import User
 from django.core.management.base import CommandError
 
 from accounts.models import Participant
+from config.project import Feedback, Item, Scale
 from monitor.management.commands.researcher import add_researcher
 from records.models import Answer
 
@@ -75,3 +77,11 @@ def test_researcher_command_changes_nothing_when_tilbot_refuses(db):
     with pytest.raises(CommandError, match="NOK"):
         add_researcher("jonas", "a-long-test-password", tilbot_account=lambda name, password: "NOK")
     assert not User.objects.exists()
+
+
+def test_export_has_the_scores_of_the_results(client, researcher, data, settings):
+    pain = Scale("pain", "Pain", ("Q01",), "worse", False, 50, "", "", "")
+    items = {"Q01": Item("Q01", 0, 10, None)}
+    settings.STUDY = dataclasses.replace(settings.STUDY, items=items, feedback=Feedback(texts={}, scales=(pain,)))
+    rows = csv_rows(client.post("/researcher/export", {"codes": "without"}), "scores.csv")
+    assert rows == [["participant", "scale", "score", "worth_discussing"], ["1", "pain", "30.0", "False"], ["2", "pain", "70.0", "True"]]

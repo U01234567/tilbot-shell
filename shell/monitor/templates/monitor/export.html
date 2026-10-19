@@ -2,7 +2,7 @@
 {% block title %}Export · {{ study.name }}{% endblock %}
 {% block content %}
   <h1>Export the data</h1>
-  <p>You get a zip with three CSV files: <code>participants.csv</code>, <code>answers.csv</code> and <code>transcripts.csv</code>. Answers and transcripts are decrypted in the file. Times are in {{ study.time_zone }}.</p>
+  <p>You get a zip with four CSV files: <code>participants.csv</code>, <code>answers.csv</code>, <code>scores.csv</code> (the scales of the results, from the latest answers) and <code>transcripts.csv</code>. Answers and transcripts are decrypted in the file. Times are in {{ study.time_zone }}.</p>
   <form method="post">
     {% csrf_token %}
     <div class="choice">

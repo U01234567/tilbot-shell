@@ -179,13 +179,23 @@ The researcher port has two dashboards: Tilbot's, for the conversation (projects
 
 The catch: the two passwords are stored apart, so changing one in a dashboard leaves the other as it was.
 
-## Known gaps in version 0.7
+## Results beside the chat, drawn by the shell
 
-- **Not built yet:** phase 2, phase 3 (and so the knowledge base), status and logs in the researcher dashboard, a chat page in the study's own look, backups and the update flow in `start_shell.py`, and running on a server.
+Phase 2 shows each scale of `project/feedback.toml` as a bar from 0 to 100, with its threshold as a line, the part worth discussing shaded, a label when the score lies there, and one sentence. The shell draws it (SVG, no chart library) in a panel beside the chat, over it on a phone, and the chat keeps running underneath. The flowchart opens it with Tilbot's own "Message to parent window" event, so Tilbot needs no patch, and the results never pass through Tilbot: the panel fetches them from the shell with the participant's session. Scores keep their official direction (higher is better for functioning, worse for complaints), explained above each group.
+
+- **A separate results page.** Simpler, but leaving the chat page ends the conversation: Tilbot starts again from the top when its frame reloads.
+- **Results as chat messages.** Tilbot shows text only, so no bars, and the texts would travel through Tilbot.
+- **Flip complaints so a longer bar is always better.** Easier to read at a glance, but the patient would see a different number than the export and the literature. Colour, label and the sentence above each group carry the meaning instead.
+- **A narrative with placeholders, configurable groups, score bands.** More expressive, but more to configure and to get wrong; one sentence per scale and state was enough for the first study.
+
+## Known gaps in version 0.8
+
+- **Not built yet:** phase 3 (and so the knowledge base), status and logs in the researcher dashboard, a chat page in the study's own look, backups and the update flow in `start_shell.py`, and running on a server.
 - **vector-similarity-intent is started with `--profile phase3`** until phase 3 exists, so developers don't download its model for nothing.
 - **Transcripts are best-effort.** If the shell is down, Tilbot logs an error and that line is lost. Answers are not lost: they are asked again.
 - **The `transcripts.enabled` setting is read by the shell only.** Tilbot still sends every event; the shell discards them. That costs nothing but is worth knowing.
-- **Only number answers** are supported in phase 1.
+- **Answers are numbers or fixed words** (`labels` in `questionnaire.toml`); free text is phase 3.
+- **The results' scores are mean-based (0–100).** Questionnaires scored by a plain sum would need a second method in `phase2_feedback/scoring.py`.
 - **No healthchecks** in the compose files yet.
 - **The patches were made against the code of 12 October 2026.** If they don't apply to a newer pinned commit, regenerate them.
 - **The chat token shows the participant's row number.** It is signed, so it can't be forged, but someone who inspects the chat's address sees roughly how many people signed up before them. A random id per participant would close this.

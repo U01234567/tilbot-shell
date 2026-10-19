@@ -26,3 +26,9 @@ class TranscriptLine(models.Model):
 
     class Meta:
         ordering = ["conversation", "seq"]
+
+
+def latest_answers(participant_id: int) -> dict[str, int]:
+    """Item id -> the participant's answer to it; when an item was answered twice, the latest counts."""
+    answers = Answer.objects.filter(participant_id=participant_id).order_by("at", "pk")
+    return {answer.item: int(answer.value) for answer in answers}

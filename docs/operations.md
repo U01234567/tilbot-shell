@@ -81,11 +81,11 @@ A study has two halves, linked by one id. **The project folder** (`project/`) ho
    python start_shell.py researcher
    ```
    It asks for a name and a password of at least 12 characters, twice. You should see **"Ready. Log in with <name> on both dashboards"**. The same name and password now open our researcher dashboard and Tilbot's dashboard. Run it again with the same name to set a new password for our dashboard; Tilbot's password is changed under "Your account" in Tilbot's dashboard.
-2. **Fill in the project folder.** Edit `project/project.toml` (name, language, texts, ages, genders, time zone, transcripts) and `project/questionnaire.toml` (each item's scale and threshold), then `python start_shell.py restart shell`. Every line has a comment saying what it does.
+2. **Fill in the project folder.** Edit `project/project.toml` (name, language, texts, ages, genders, time zone, transcripts), `project/questionnaire.toml` (each item's scale, button words and threshold) and `project/feedback.toml` (the results: scales, thresholds, texts; delete it for a study without results), then `python start_shell.py restart shell`. Every line has a comment saying what it does.
 3. **Make the Tilbot project.** Open http://127.0.0.1:8081/dashboard, log in with your name and password, and click "+ New project".
-4. **Draw the flowchart.** The pencil icon opens the editor. Each question gets a save block whose `item` matches an id in `questionnaire.toml`; [architecture.md](architecture.md#phase-1-in-tilbots-editor) shows how. Save with the save icon; "Project saved!" confirms it.
+4. **Draw the flowchart.** The pencil icon opens the editor. Each question gets a save block whose `item` matches an id in `questionnaire.toml`, and the end opens the results; [architecture.md](architecture.md#phase-1-in-tilbots-editor) shows how. Save with the save icon; "Project saved!" confirms it. To start from a working example instead, click the project's icon in the Import column and pick `project-example/tilbot/example.tilbot`.
 5. **Link the two.** Switch the project to running in Tilbot's dashboard. The globe icon opens `/?project=<id>`: copy that id into `[tilbot] project_id` in `project/project.toml`, then `python start_shell.py restart shell`.
-6. **Test it.** Sign up at https://localhost: you should see the bot's first message inside the page. Answer a question, then open the [researcher dashboard](#the-researcher-dashboard-and-the-data-export): you should see one participant and one answer more than before.
+6. **Test it.** Sign up at https://localhost: you should see the bot's first message inside the page. Answer the questions: at the end the results open beside the chat (over it on a phone). Then open the [researcher dashboard](#the-researcher-dashboard-and-the-data-export): you should see one participant more, and their answers.
 7. **Run the study.** Participants sign up and chat; you follow the counts in the researcher dashboard and export at the end.
 8. **Back up the conversation.** In Tilbot's dashboard, the up-arrow icon downloads the project as one `.tilbot` file; keep it in `project/tilbot/`. Tilbot keeps its projects in a Docker volume, which `down -v` deletes. To move a project to another computer or a server, import that file there.
 
@@ -105,7 +105,7 @@ The shell's own dashboard shows how the study is going and hands out the data: h
 - **Without codes:** participants are numbered 1, 2, 3 … in order of sign-up. The files can be joined to each other, but not traced to a person. Use this for analysis.
 - **With codes:** every row carries the participant's 4-character code. Only when the study needs it, for example for a removal request; the file is personal data.
 
-Both give one zip with `participants.csv`, `answers.csv` and `transcripts.csv`, decrypted, with times in the study's time zone. **The export is the one place where data leaves the database unencrypted:** store it where the study's data management plan says, never in the repository folder (`.gitignore` skips zips as a safety net).
+Both give one zip with `participants.csv`, `answers.csv`, `scores.csv` (each scale of the results, from the latest answers, as the participant saw it) and `transcripts.csv`, decrypted, with times in the study's time zone. **The export is the one place where data leaves the database unencrypted:** store it where the study's data management plan says, never in the repository folder (`.gitignore` skips zips as a safety net).
 
 ## On a server
 

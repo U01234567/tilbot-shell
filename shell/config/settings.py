@@ -11,7 +11,7 @@ from django.core.exceptions import ImproperlyConfigured
 
 from config.project import load_study
 
-SHELL_VERSION = "0.7.0"  # shown in the mark at the bottom of the shell's pages
+SHELL_VERSION = "0.8.0"  # shown in the mark at the bottom of the shell's pages
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
@@ -53,7 +53,8 @@ INSTALLED_APPS = [
     "records",
     "bridge",
     "monitor",
-    # phase2_feedback and phase3_questions join when they get models or pages.
+    "phase2_feedback",
+    # phase3_questions joins when it gets models or pages.
     # phase1_collect is plain Python (rules only) and needs no entry here.
 ]
 

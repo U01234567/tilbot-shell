@@ -1,0 +1,22 @@
+{# The results panel, put beside the chat by static/js/chat.js. No page around it: the chat page is the page. #}
+<div class="results-top">
+  <h1>{{ texts.results }}</h1>
+  <button type="button" class="quiet" data-results-back>{{ texts.back }}</button>
+</div>
+{% if not better and not worse %}
+  <p>{{ texts.none }}</p>
+{% else %}
+  <p>{{ texts.intro }}</p>
+  <p class="hint legend"><span class="line-key"></span>{{ texts.line }}</p>
+  {% if better %}
+    <h2>{{ texts.better }}</h2>
+    <p class="hint">{{ texts.better_hint }}</p>
+    {% include "phase2_feedback/bars.html" with bars=better %}
+  {% endif %}
+  {% if worse %}
+    <h2>{{ texts.worse }}</h2>
+    <p class="hint">{{ texts.worse_hint }}</p>
+    {% include "phase2_feedback/bars.html" with bars=worse %}
+  {% endif %}
+  <div class="actions"><button type="button" data-results-print>{{ texts.print }}</button></div>
+{% endif %}
