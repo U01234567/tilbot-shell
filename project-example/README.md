@@ -9,6 +9,7 @@ Participant data is never in this folder: it stays in the database.
 | `project.toml` | the study name, sign-up limits and options, the Tilbot project id | the research team changes a setting |
 | `questionnaire.toml` | per item: the answer scale, the words on its buttons and the threshold for follow-ups | the questionnaire changes |
 | `theme/tokens.css` | the study's colours and font, on the participant pages only | the look should change |
+| `theme/logo.png` | optional: the study's logo, above the participant pages (not the chat) | the logo changes |
 | `feedback.toml` | the results beside the chat: scales, thresholds and texts (phase 2); leave it out for no results | the results change |
 | `tilbot/<name>.tilbot` | the flowchart, exported from Tilbot's dashboard as a backup; `example.tilbot` is a working example to import | the conversation changes |
 | `knowledge.xlsx` | the questions participants may ask, with example phrasings, answers and optional links (phase 3); `knowledge-example.xlsx` shows the format: rename a copy to switch phase 3 on | the knowledge base changes |

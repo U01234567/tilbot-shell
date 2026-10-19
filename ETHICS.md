@@ -49,8 +49,9 @@ go first), and are not kept after the containers are removed.
 
 ## What the participant's browser is given
 
-The chat page passes Tilbot a signed token that names the participant's row number in the database,
-never the code. Anyone who reads the page's address sees that number. It cannot be forged.
+The chat page passes Tilbot an encrypted token that names the participant's row number in the database,
+never the code. Whoever reads the page's address can't read the number from it, and can't forge a token.
+It expires after 12 hours.
 
 If the study has `feedback.toml`, the participant sees their own results beside the chat: a score per
 scale, computed from their latest answers each time the results open, and never stored. Only the signed-in

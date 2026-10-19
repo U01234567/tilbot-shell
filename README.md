@@ -2,7 +2,7 @@
 
 A framework for research chatbots that get to know a participant, give feedback, and then answer their questions. It wraps Tilbot for the conversation and vector-similarity-intent for understanding free text, and adds what a study needs around them: participant accounts, encrypted storage, rules, a knowledge base and a dashboard. One study at a time, defined entirely in one project folder; the same framework serves patients, voters, students or any other group.
 
-**Status: version 0.10.** All three phases work end to end: sign-up, the chat, storing answers and deciding follow-ups, the participant's results beside the chat, questions answered from the study's knowledge base, and a researcher dashboard to export and remove data. Encrypted, checked backups and safe updates come with `start_shell.py`. Not yet: running on a server; see [known gaps](docs/decisions.md#known-gaps-in-version-010). The descriptions below are the framework as a whole.
+**Status: version 0.11.** All three phases work end to end: sign-up, the chat, storing answers and deciding follow-ups, the participant's results beside the chat, questions answered from the study's knowledge base, and a researcher dashboard to export and remove data. Encrypted, checked backups and safe updates come with `start_shell.py`. Not yet: running on a server; see [known gaps](docs/decisions.md#known-gaps-in-version-011). The descriptions below are the framework as a whole.
 
 ## Quick start
 

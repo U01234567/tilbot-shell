@@ -3,8 +3,9 @@
     python start_shell.py up         create .env and project/ if needed, then build and start everything
     python start_shell.py trust      make this computer trust https://localhost and https://bot.localhost
     python start_shell.py researcher one name and password for both dashboards on http://127.0.0.1:8081
-    python start_shell.py backup [folder]
-                                     an encrypted backup of the whole study, checked by restoring it
+    python start_shell.py backup [folder] [--keep N]
+                                     an encrypted backup of the whole study, checked by restoring it;
+                                     --keep N then deletes all but the N newest backups in backups/
     python start_shell.py restore <folder>
                                      replace the study's data, Tilbot's projects and project/ with a backup
     python start_shell.py updates    compare the pinned commits in components.toml with upstream
@@ -16,6 +17,7 @@
                                      for example: logs -f shell, down, exec shell pytest
 """
 
+import argparse
 import base64
 import io
 import os
@@ -284,9 +286,15 @@ def check_backup(parts: dict[str, bytes]) -> None:
     print(f"Checked: the database restores ({int(count)} participants), and Tilbot's data and project/ can be read.")
 
 
-def backup(folder: str = "") -> Path:
+def backup(*args: str) -> Path:
     """Make an encrypted backup of the whole study in a new folder, and check it by restoring it."""
-    target = Path(folder) if folder else BACKUPS / time.strftime("%Y-%m-%d-%H%M%S")
+    parser = argparse.ArgumentParser(prog="python start_shell.py backup")
+    parser.add_argument("folder", nargs="?", default="", help="where to put it; default: backups/<date and time>")
+    parser.add_argument("--keep", type=int, default=0, help="afterwards, keep only this many newest backups in backups/")
+    options = parser.parse_args(args)
+    if options.keep < 0:
+        raise ValueError("--keep needs a number of backups, 1 or more")
+    target = Path(options.folder) if options.folder else BACKUPS / time.strftime("%Y-%m-%d-%H%M%S")
     if target.exists():
         raise ValueError(f"{target} exists already: give another folder")
     compose("exec", "shell", "python", "manage.py", "clearsessions")  # expired sessions don't go into a backup
@@ -304,7 +312,18 @@ def backup(folder: str = "") -> Path:
         raise
     (target / "README.txt").write_text(BACKUP_README.format(study=study_name(), when=time.strftime("%Y-%m-%d %H:%M")), encoding="utf-8")
     print(f"Backup made: {target}. Keep a copy elsewhere too, and FIELD_ENCRYPTION_KEY apart from it.")
+    if options.keep:
+        keep_newest(options.keep)
     return target
+
+
+def keep_newest(keep: int) -> None:
+    """Delete all but the newest complete backups in backups/ (complete: README.txt, written after the check)."""
+    complete = sorted((folder for folder in BACKUPS.iterdir() if (folder / "README.txt").exists()),
+                      key=lambda folder: (folder / "README.txt").stat().st_mtime)
+    for old in complete[:-keep]:
+        shutil.rmtree(old)
+        print(f"Deleted the older backup {old.name} (--keep {keep}).")
 
 
 def restore(folder: str = "") -> None:

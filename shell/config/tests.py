@@ -35,3 +35,12 @@ def test_without_feedback_toml_there_are_no_results(tmp_path):
     for name in ("project.toml", "questionnaire.toml"):
         (tmp_path / name).write_text((settings.PROJECT_DIR / name).read_text(encoding="utf-8"), encoding="utf-8")
     assert load_study(tmp_path).feedback is None
+
+
+def test_a_logo_in_the_theme_folder_is_shown(tmp_path):
+    for name in ("project.toml", "questionnaire.toml"):
+        (tmp_path / name).write_text((settings.PROJECT_DIR / name).read_text(encoding="utf-8"), encoding="utf-8")
+    assert load_study(tmp_path).logo is False
+    (tmp_path / "theme").mkdir()
+    (tmp_path / "theme" / "logo.png").write_bytes(b"png")
+    assert load_study(tmp_path).logo is True

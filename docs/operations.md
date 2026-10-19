@@ -60,6 +60,7 @@ Every command runs from the repository root. `start_shell.py` picks the right co
 | Stop | `python start_shell.py down` |
 | After a change in `project/` | `python start_shell.py restart shell` |
 | See what the shell is doing | `python start_shell.py logs -f shell` |
+| Is every service healthy? | `python start_shell.py ps`: the status says `(healthy)`, or `(unhealthy)` with its logs to look at |
 | How many took part, export the data | http://127.0.0.1:8081/researcher/ (see [the researcher dashboard](#the-researcher-dashboard-and-the-data-export)) |
 | An account for someone, on both dashboards | `python start_shell.py researcher` |
 | Back up everything, encrypted and checked | `python start_shell.py backup` (see [Backups](#backups)) |
@@ -158,7 +159,7 @@ You should see "Checked: the database restores (… participants)" and "Backup m
 
 - **Every file is encrypted with `FIELD_ENCRYPTION_KEY`,** so a backup can't be read without the key, and the key is never in the backup. The data goes from the containers through memory into the encrypted file; it is never written to disk unencrypted.
 - **Keep a copy elsewhere:** `backups/` is on the same computer as the study, and git skips it. To write straight to another place: `python start_shell.py backup D:\backups\2026-10-19`.
-- **Make one** before an update (`update` does it for you), before the study starts, and regularly while it runs. Automatic backups on a schedule come with running on a server.
+- **Make one** before an update (`update` does it for you), before the study starts, and regularly while it runs. `python start_shell.py backup --keep 14` deletes all but the 14 newest backups in `backups/` afterwards, for a daily schedule. Scheduling it comes with running on a server.
 
 **Restore one:**
 ```

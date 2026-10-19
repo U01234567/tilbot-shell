@@ -113,3 +113,11 @@ def test_ask_is_not_found_without_a_knowledge_base(client, db, settings):
     settings.STUDY = STUDY
     settings.BRIDGE_SECRET = SECRET
     assert client.post("/bridge/ask", {"bridge_secret": SECRET}).status_code == 404
+
+
+def test_ask_says_busy_after_too_many_questions_in_an_hour(ask, settings):
+    from bridge.views import QUESTIONS_PER_HOUR
+    participant = Participant.objects.get()
+    Question.objects.bulk_create([Question(participant=participant, entry="") for _ in range(QUESTIONS_PER_HOUR)])
+    assert ask("Can I stop?", closest="Can I stop?").json() == {"intent": "busy"}
+    assert Question.objects.count() == QUESTIONS_PER_HOUR  # the refused question isn't kept

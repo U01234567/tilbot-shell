@@ -1,14 +1,23 @@
 {% extends "base.html" %}
 {% load static %}
 {% block page_class %}{% if bot_url %}chat{% else %}page{% endif %}{% endblock %}
+{% block logo %}{% endblock %}
 {% block content %}
   {% if bot_url %}
     <iframe src="{{ bot_url }}" title="{{ study.name }}" data-origin="{{ bot_origin }}"></iframe>
     {% if study.feedback %}
       {# Filled and shown by static/js/chat.js when the flowchart says show_results, or the button below is used. #}
       <section id="results" class="results" data-url="{% url 'results' %}" hidden></section>
-      <script src="{% static 'js/chat.js' %}" defer></script>
     {% endif %}
+    {# Signing out halfway loses the participant's place in the chat, so chat.js asks first. #}
+    <dialog id="sign-out-check" class="check">
+      <p>{{ study.texts.sign_out_check }}</p>
+      <div class="actions">
+        <button type="button" data-sign-out>{{ study.texts.sign_out }}</button>
+        <button type="button" class="quiet" data-stay>{{ study.texts.stay }}</button>
+      </div>
+    </dialog>
+    <script src="{% static 'js/chat.js' %}" defer></script>
   {% else %}
     <p class="notice">No Tilbot project is linked yet. Put its id in project/project.toml and restart the shell (docs/operations.md).</p>
   {% endif %}

@@ -66,6 +66,7 @@ NO_TILBOT_PROJECT = "0" * 32
 TEXT_KEYS = (
     "sign_up", "sign_in", "sign_out", "your_id", "write_it_down", "age", "gender",
     "already_have_id", "no_id_yet", "wrong_id", "id_taken", "blocked_title", "blocked_text", "back",
+    "sign_out_check", "stay",
 )
 # Every text of the results panel. feedback.toml must define each one under [texts].
 FEEDBACK_TEXT_KEYS = (
@@ -91,6 +92,7 @@ class Study:
     items: dict[str, Item]
     feedback: Feedback | None = None  # None: the study shows no results
     knowledge: tuple[Entry, ...] | None = None  # None: the study answers no questions
+    logo: bool = False  # project/theme/logo.png exists: the participant pages show it
 
 
 def load_study(project_dir: Path) -> Study:
@@ -117,6 +119,7 @@ def load_study(project_dir: Path) -> Study:
         items={item.id: item for item in items},
         feedback=load_feedback(project_dir / "feedback.toml", ids),
         knowledge=load_knowledge(project_dir / "knowledge.xlsx"),
+        logo=(project_dir / "theme" / "logo.png").exists(),
     )
 
 

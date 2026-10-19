@@ -8,6 +8,7 @@
   {% block theme %}<link rel="stylesheet" href="{% static 'theme/tokens.css' %}">{% endblock %}
 </head>
 <body class="{% block body_class %}{% endblock %}">
+  {% block logo %}{% if study.logo %}<img class="logo" src="{% static 'theme/logo.png' %}" alt="{{ study.name }}">{% endif %}{% endblock %}
   <main class="{% block page_class %}page{% endblock %}">
     {% block content %}{% endblock %}
   </main>

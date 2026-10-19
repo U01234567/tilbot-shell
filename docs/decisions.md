@@ -133,7 +133,7 @@ A participant signs up with age and gender, and gets a random 4-character code. 
 - There are 1,048,576 possible codes. With 200 participants, one random guess hits someone with a chance of 1 in 5,243. A lockout after repeated failures limits guessing from one address.
 - A lost code can't be recovered.
 
-**Revisit this before real participants use the system.**
+**Revisit this before real participants use the system.** On 19 October 2026 it was kept at 4 characters for the proof of concept, with the ethics committee to confirm; a 6-character code (32⁶, about a billion) was the alternative.
 
 - **Email and password.** It is safer, but collects identifying data the study may not want to hold, and adds password resets.
 - **A longer code, or a code plus a PIN.** The likely next step, once the proof of concept has been tested.
@@ -214,18 +214,22 @@ One participant is removed from the researcher dashboard (code, then what will b
 - **Automatic deletion after a number of days in `project.toml`.** Hands-off, but one wrong number deletes research data before anyone analysed it.
 - **Removal by command only.** Researchers asked for screens over commands; one participant's request is an everyday task.
 
-## Known gaps in version 0.10
+## Leaving halfway asks first
 
-- **Not built yet:** status and logs in the researcher dashboard, a chat page in the study's own look, backups on a schedule, and running on a server.
-- **Backup and restore were tested against a real Postgres, with Docker simulated.** The Mongo and Tilbot-file steps were not run against the real containers before release: check `backup` and `restore` once on a test setup.
+Signing out shows a question in the study's own words (`sign_out_check` and `stay` in `project.toml`), and while the results haven't been shown, closing or leaving the chat page brings up the browser's own "Leave site?" question. Leaving halfway loses the participant's place: Tilbot starts the conversation again.
+
+- **Only the sign-out question.** Some find the browser's warning pushy, but a closed tab loses the same place as a sign-out.
+- **Our own leave dialog.** Browsers don't allow one: on leaving, only their own question, in their own words, can appear.
+
+## Known gaps in version 0.11
+
+- **Not built yet:** status and logs in the researcher dashboard, backups on a schedule, and running on a server.
+- **Tilbot's two servers have no health check.** Their API has no call without side effects to check with; the shell, both databases and the matching service do have one.
 - **Matching is tested with a stand-in, not the real model.** The language model is too large for the automated tests; check the matching on the real knowledge base before a study starts, and add phrasings where it misses.
-- **No limit on how many questions a participant asks.** Each question costs the matching service a moment of work; a participant who sends hundreds slows it for others.
 - **The answer to a question can't use the participant's own data** ("your pain score is …") yet.
 - **Transcripts are best-effort.** If the shell is down, Tilbot logs an error and that line is lost. Answers are not lost: they are asked again.
 - **The `transcripts.enabled` setting is read by the shell only.** Tilbot still sends every event; the shell discards them. That costs nothing but is worth knowing.
 - **Questionnaire answers are numbers or fixed words** (`labels` in `questionnaire.toml`); free text is only for questions (phase 3).
 - **The results' scores are mean-based (0–100).** Questionnaires scored by a plain sum would need a second method in `phase2_feedback/scoring.py`.
-- **No healthchecks** in the compose files yet.
 - **The patches were made against the code of 12 October 2026.** If they don't apply to a newer pinned commit, regenerate them.
-- **The chat token shows the participant's row number.** It is signed, so it can't be forged, but someone who inspects the chat's address sees roughly how many people signed up before them. A random id per participant would close this.
 - **Tilbot's dashboard is only reachable in development.** `compose.yaml` doesn't publish port 8081, so on a server researchers have no way in yet (an SSH tunnel is the likely answer).

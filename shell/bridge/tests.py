@@ -1,11 +1,13 @@
 import dataclasses
+import time
 
 import pytest
+from django.core import signing
 from django.db import connection
 
 from accounts.models import Participant
 from accounts.session import SESSION_KEY
-from bridge.tokens import make_token
+from bridge.tokens import fernet, make_token, read_token
 from config.project import Item, Study
 from records.models import Answer, TranscriptLine
 
@@ -104,3 +106,25 @@ def test_transcripts_are_dropped_when_the_study_says_no(client, participant, set
     settings.STUDY = dataclasses.replace(STUDY, transcripts=False)
     assert post_log(client, participant).status_code == 204
     assert not TranscriptLine.objects.exists()
+
+
+def test_chat_token_hides_the_row_number_and_refuses_tampering():
+    token = make_token(4321)
+    assert "4321" not in token and read_token(token) == 4321
+    with pytest.raises(signing.BadSignature):
+        read_token(token[:-2] + ("A" if token[-2] != "A" else "B") + token[-1])
+
+
+def test_chat_token_expires_with_the_session():
+    old = fernet().encrypt_at_time(b"7", int(time.time()) - 13 * 60 * 60)
+    with pytest.raises(signing.BadSignature):
+        read_token(old.decode())
+
+
+def test_chat_page_asks_before_signing_out(client, participant, settings):
+    settings.STUDY = dataclasses.replace(STUDY, tilbot_project_id="1" * 32, texts={"sign_out_check": "Really leave?", "stay": "Stay"})
+    session = client.session
+    session[SESSION_KEY] = participant.pk
+    session.save()
+    page = client.get("/chat").content.decode()
+    assert 'id="sign-out-check"' in page and "Really leave?" in page and "js/chat.js" in page

@@ -1,9 +1,11 @@
+from datetime import timedelta
 from urllib.parse import urlencode
 
 from django.conf import settings
 from django.core import signing
 from django.http import HttpResponse, HttpResponseBadRequest, HttpResponseForbidden, HttpResponseNotFound, JsonResponse
 from django.shortcuts import redirect, render
+from django.utils import timezone
 from django.utils.crypto import constant_time_compare
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
@@ -18,6 +20,8 @@ from phase3_questions import matching
 
 ANSWERED = "answered"  # Tilbot connector: show the answer, which comes as the connector's label
 UNKNOWN = "unknown"  # Tilbot connector: the knowledge base has no answer
+BUSY = "busy"  # Tilbot connector: this participant asked QUESTIONS_PER_HOUR questions in the last hour
+QUESTIONS_PER_HOUR = 30  # so one participant can't keep the matching service busy for everyone else
 
 
 def chat(request):
@@ -106,7 +110,8 @@ def ask(request):
     """Answer one question from the knowledge base (phase 3), and keep what was asked.
 
     Tilbot follows the connector "answered" and shows the answer text it gets as the connector's
-    label, or follows "unknown". Any error returns 4xx or 503, which makes Tilbot follow "else".
+    label, or follows "unknown", or "busy" after too many questions. Any error returns 4xx or 503, which makes
+    Tilbot follow "else".
     """
     knowledge = settings.STUDY.knowledge
     if not has_secret(request):
@@ -120,6 +125,9 @@ def ask(request):
         return HttpResponseBadRequest(repr(error))
     if not question:
         return HttpResponseBadRequest("the question is empty")
+    hour_ago = timezone.now() - timedelta(hours=1)
+    if Question.objects.filter(participant_id=participant_id, at__gte=hour_ago).count() >= QUESTIONS_PER_HOUR:
+        return JsonResponse({"intent": BUSY})
     entries = matching.by_phrasing(knowledge)
     try:
         phrasing = matching.closest_phrasing(question, list(entries), settings.INTENT_URL)

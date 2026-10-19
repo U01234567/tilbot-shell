@@ -53,6 +53,11 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       PROJECT_DIR: /project
+    healthcheck:   # `python start_shell.py ps` shows (healthy) or (unhealthy)
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/', timeout=5)"]
+      interval: 30s
+      retries: 3
+      start_period: 2m   # migrations, and in development the test tools, come first
     volumes:
       - ./project:/project:ro
       - static:/app/staticfiles
@@ -99,6 +104,10 @@ services:
   mongo:
     logging: *logging
     image: mongo:8.3   # the version in Tilbot's own compose file
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      retries: 3
     restart: unless-stopped
     volumes:
       - mongo:/data/db
@@ -117,6 +126,11 @@ services:
     environment:
       PORT: "8081"
       MODELNAME: ${INTENT_MODEL:-NetherlandsForensicInstitute/robbert-2022-dutch-sentence-transformers}   # a sentence-transformers model for the study's language
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8081/healthcheck', timeout=5)"]
+      interval: 30s
+      retries: 3
+      start_period: 15m   # the first start downloads the language model
     volumes:
       - models:/root/.cache/huggingface   # the model downloads once, then works offline
 

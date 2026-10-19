@@ -158,6 +158,7 @@ The shell sends the participant's question and every question and phrasing to ve
 2. **A Processing block "ask"**, using `shell-ask`, without parameters. Its connectors:
    - `answered` → an Automatically proceed block whose text is the variable "previous connector label": the shell sends the answer as that label. It leads back to step 1.
    - `unknown` → a block saying the bot has no answer (and who does), back to step 1
+   - `busy` → a block saying to try again in an hour: one participant may ask 30 questions an hour (`QUESTIONS_PER_HOUR` in `bridge/views.py`), back to step 1
    - *else* → "Something went wrong, let's try that again", back to step 1
 
 The shell keeps every question with the entry it was matched to (table `records_question`); the question's text only when the study keeps transcripts.
