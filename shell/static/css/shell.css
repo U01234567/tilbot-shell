@@ -13,6 +13,8 @@
   --warn: #c45a12;      /* a result worth discussing: its bar */
   --warn-soft: #fde3cf; /* its zone on the track, and its label */
   --warn-ink: #8a3b07;  /* the label's text */
+  --fine: #2f8f5b;      /* a result within the threshold: its bar */
+  --fine-soft: #e1f2e7; /* its zone on the track */
   --radius: 1rem;
   --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
@@ -69,36 +71,28 @@ button, .button { display: inline-flex; align-items: center; min-height: 2.75rem
 .check p { margin: 0 0 1rem; }
 .check::backdrop { background: rgb(41 23 60 / .45); }
 
-/* The results (phase2_feedback): one bar per scale on a 0–100 track. The shaded part of the track and the line
-   mark where a score is worth discussing; a bar that lies there turns orange and gets a label, never colour alone. */
+/* The results (phase2_feedback): per scale a name and one bar on a 0–100 track. The track is light green where
+   a score is fine and light orange where it is worth discussing, with a thick line between; the bar is green or
+   orange as a whole, and an orange one also gets a label: never colour alone. */
 .results { grid-area: results; overflow: auto; padding: 1.5rem; background: var(--field); border-left: 1px solid var(--line); }
 .results h1 { margin: 0; }
-.results h2 { font-size: 1.1rem; margin: 1.5rem 0 0; }
 .results p { margin: .25rem 0 .5rem; }
+.results hr { border: 0; border-top: 1px solid var(--line); margin: 1rem 0; }
 .results-top { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: .75rem; }
 .results-top button { display: none; }
-.legend { display: flex; gap: .5rem; align-items: center; }
-.line-key { flex: none; width: 2px; height: 1.1rem; background: var(--ink); }
-.scale { margin: .75rem 0 1rem; }
-.scale-head { display: flex; justify-content: space-between; align-items: baseline; gap: .5rem; }
-.bar { display: block; width: 100%; height: 1.5rem; }
+.scale-head { display: flex; justify-content: space-between; align-items: baseline; gap: .5rem; margin-bottom: .4rem; }
+.bar { display: block; width: 100%; height: 1.4rem; border-radius: .3rem; }
 .track { fill: var(--line); }
-.zone { fill: var(--warn-soft); }
+.fine-zone { fill: var(--fine-soft); }
+.worth-zone { fill: var(--warn-soft); }
 .fill { fill: var(--brand); }
-.fill.flagged { fill: var(--warn); }
-.tick { stroke: var(--ink); stroke-width: 2px; vector-effect: non-scaling-stroke; }
+.fill.fine { fill: var(--fine); }
+.fill.worth { fill: var(--warn); }
+.limit { stroke: var(--ink); stroke-width: 3px; vector-effect: non-scaling-stroke; }
 .flag { font-size: .8rem; font-weight: 600; white-space: nowrap; color: var(--warn-ink); background: var(--warn-soft); padding: .05rem .5rem; border-radius: 999px; }
 
 @media (max-width: 45rem) {
   .chat.with-results { grid-template: "bot" 1fr "bar" auto / 1fr; }
   .results { position: fixed; inset: 0; z-index: 1; border: 0; }
   .results-top button { display: inline-flex; }
-}
-
-/* Printing the results: only the results. */
-@media print {
-  body { background: none; }
-  .chat iframe, .chat-bar, .shell-mark, .results button { display: none; }
-  .chat.with-results { display: block; }
-  .results { position: static; overflow: visible; border: 0; padding: 0; }
 }

@@ -37,9 +37,6 @@ class Scale:
     higher: str  # "better" or "worse": what a higher score means for the participant
     reverse: bool  # True when a high answer on the items means a low score
     threshold: float | None  # worth discussing below this ("better") or above it ("worse"); None: never
-    about: str  # one short line saying what the scale measures
-    problem: str  # the sentence shown when the score is worth discussing
-    fine: str  # the sentence shown otherwise
 
 
 @dataclass(frozen=True)
@@ -69,10 +66,7 @@ TEXT_KEYS = (
     "sign_out_check", "stay",
 )
 # Every text of the results panel. feedback.toml must define each one under [texts].
-FEEDBACK_TEXT_KEYS = (
-    "results", "intro", "line", "better", "better_hint", "worse", "worse_hint",
-    "worth_discussing", "none", "print", "back",
-)
+FEEDBACK_TEXT_KEYS = ("results", "intro", "worth_discussing", "none", "back")
 HIGHER = ("better", "worse")
 # The columns of knowledge.xlsx, in its first row. topic, phrasings and link may stay empty.
 KNOWLEDGE_COLUMNS = ("id", "topic", "question", "phrasings", "answer", "link")
@@ -166,9 +160,6 @@ def parse_scale(raw: dict, item_ids: list[str]) -> Scale:
         higher=raw["higher"],
         reverse=raw.get("reverse", False),
         threshold=raw.get("threshold"),
-        about=raw.get("about", ""),
-        problem=raw.get("problem", ""),
-        fine=raw.get("fine", ""),
     )
 
 

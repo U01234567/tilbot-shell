@@ -181,12 +181,13 @@ The catch: the two passwords are stored apart, so changing one in a dashboard le
 
 ## Results beside the chat, drawn by the shell
 
-Phase 2 shows each scale of `project/feedback.toml` as a bar from 0 to 100, with its threshold as a line, the part worth discussing shaded, a label when the score lies there, and one sentence. The shell draws it (SVG, no chart library) in a panel beside the chat, over it on a phone, and the chat keeps running underneath. The flowchart opens it with Tilbot's own "Message to parent window" event, so Tilbot needs no patch, and the results never pass through Tilbot: the panel fetches them from the shell with the participant's session. Scores keep their official direction (higher is better for functioning, worse for complaints), explained above each group.
+Phase 2 shows each scale of `project/feedback.toml` as a bar from 0 to 100, once every item is answered. Since 19 October 2026 the panel is kept simple for the proof of concept: per scale its name and one bar, green or orange as a whole, on a track that is light green where a score is fine and light orange where it is worth discussing, with a thick line at the threshold, and a label on an orange bar. The shell draws it (SVG, no chart library) in a panel beside the chat, over it on a phone, and the chat keeps running underneath. The flowchart opens it with Tilbot's own "Message to parent window" event, so Tilbot needs no patch, and the results never pass through Tilbot: the panel fetches them from the shell with the participant's session. Scores keep their official direction (higher is better for functioning, worse for complaints); the colours of the track show which side is which.
 
 - **A separate results page.** Simpler, but leaving the chat page ends the conversation: Tilbot starts again from the top when its frame reloads.
 - **Results as chat messages.** Tilbot shows text only, so no bars, and the texts would travel through Tilbot.
 - **Flip complaints so a longer bar is always better.** Easier to read at a glance, but the patient would see a different number than the export and the literature. Colour, label and the sentence above each group carry the meaning instead.
-- **A narrative with placeholders, configurable groups, score bands.** More expressive, but more to configure and to get wrong; one sentence per scale and state was enough for the first study.
+- **More on the panel: a sentence and a definition per scale, groups, an explanation of the line, a print button.** Built first, then left out: participants were given too much at once.
+- **Colour per zone of the bar** (the part past the threshold orange). On a scale where higher is better, a fine score would still show orange below the line, so the bar takes one colour and the track shows the zones.
 
 ## Phase 3: answers from the study's own knowledge base
 
@@ -221,9 +222,17 @@ Signing out shows a question in the study's own words (`sign_out_check` and `sta
 - **Only the sign-out question.** Some find the browser's warning pushy, but a closed tab loses the same place as a sign-out.
 - **Our own leave dialog.** Browsers don't allow one: on leaving, only their own question, in their own words, can appear.
 
-## Known gaps in version 0.11
+## A returning participant skips the questions
 
-- **Not built yet:** status and logs in the researcher dashboard, backups on a schedule, and running on a server.
+Every chat starts with a call from Tilbot to the shell (`/bridge/status`): a participant who answered every item already gets a welcome back and goes straight to their questions (phase 3); their results stay under the button below the chat. Everyone else starts the questionnaire. No Tilbot patch: the starting block of the flowchart is a Processing block.
+
+- **The shell picks a different Tilbot project for returning participants.** No flowchart change, but two projects to keep in step.
+- **Ask everything again.** Simplest, but the participant repeats work, and the latest answers would replace the first.
+
+## Known gaps in version 0.12
+
+- **Not built yet:** status and logs in the researcher dashboard, backups on a schedule, running on a server, and several versions of a chatbot side by side (participants divided over Tilbot projects).
+- **A participant can't do the questionnaire again** once every item is answered.
 - **Tilbot's two servers have no health check.** Their API has no call without side effects to check with; the shell, both databases and the matching service do have one.
 - **Matching is tested with a stand-in, not the real model.** The language model is too large for the automated tests; check the matching on the real knowledge base before a study starts, and add phrasings where it misses.
 - **The answer to a question can't use the participant's own data** ("your pain score is …") yet.

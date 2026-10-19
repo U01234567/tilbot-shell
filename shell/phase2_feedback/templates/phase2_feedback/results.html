@@ -1,22 +1,27 @@
-{# The results panel, put beside the chat by static/js/chat.js. No page around it: the chat page is the page. #}
+{% load l10n %}{# The results panel, put beside the chat by static/js/chat.js. No page around it: the chat page is the page. #}
 <div class="results-top">
   <h1>{{ texts.results }}</h1>
   <button type="button" class="quiet" data-results-back>{{ texts.back }}</button>
 </div>
-{% if not better and not worse %}
+{% if not bars %}
   <p>{{ texts.none }}</p>
 {% else %}
   <p>{{ texts.intro }}</p>
-  <p class="hint legend"><span class="line-key"></span>{{ texts.line }}</p>
-  {% if better %}
-    <h2>{{ texts.better }}</h2>
-    <p class="hint">{{ texts.better_hint }}</p>
-    {% include "phase2_feedback/bars.html" with bars=better %}
-  {% endif %}
-  {% if worse %}
-    <h2>{{ texts.worse }}</h2>
-    <p class="hint">{{ texts.worse_hint }}</p>
-    {% include "phase2_feedback/bars.html" with bars=worse %}
-  {% endif %}
-  <div class="actions"><button type="button" data-results-print>{{ texts.print }}</button></div>
+  {% for b in bars %}
+    <hr>
+    <div class="scale-head"><b>{{ b.scale.name }}</b>{% if b.flag %}<span class="flag">{{ texts.worth_discussing }}</span>{% endif %}</div>
+    {% localize off %}{# numbers in SVG need a decimal point, whatever the study's language #}
+    {# The track: light green where a score is fine, light orange where it is worth discussing, a thick line between. #}
+    <svg class="bar" viewBox="0 0 100 20" preserveAspectRatio="none" role="img" aria-label="{{ b.scale.name }}: {{ b.score|floatformat:0 }}/100">
+      {% if b.fine_zone %}
+        <rect class="fine-zone" x="{{ b.fine_zone.0 }}" y="0" width="{{ b.fine_zone.1 }}" height="20"/>
+        <rect class="worth-zone" x="{{ b.worth_zone.0 }}" y="0" width="{{ b.worth_zone.1 }}" height="20"/>
+      {% else %}
+        <rect class="track" x="0" y="0" width="100" height="20"/>
+      {% endif %}
+      <rect class="{% if not b.fine_zone %}fill{% elif b.flag %}fill worth{% else %}fill fine{% endif %}" x="0" y="5" width="{{ b.score }}" height="10"/>
+      {% if b.fine_zone %}<line class="limit" x1="{{ b.scale.threshold }}" x2="{{ b.scale.threshold }}" y1="0" y2="20"/>{% endif %}
+    </svg>
+    {% endlocalize %}
+  {% endfor %}
 {% endif %}

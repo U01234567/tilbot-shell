@@ -85,7 +85,7 @@ def test_researcher_command_changes_nothing_when_tilbot_refuses(db):
 
 
 def test_export_has_the_scores_of_the_results(client, researcher, data, settings):
-    pain = Scale("pain", "Pain", ("Q01",), "worse", False, 50, "", "", "")
+    pain = Scale("pain", "Pain", ("Q01",), "worse", False, 50)
     items = {"Q01": Item("Q01", 0, 10, None)}
     settings.STUDY = dataclasses.replace(settings.STUDY, items=items, feedback=Feedback(texts={}, scales=(pain,)))
     rows = csv_rows(client.post("/researcher/export", {"codes": "without"}), "scores.csv")

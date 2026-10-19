@@ -7,4 +7,5 @@ urlpatterns = [
     path("bridge/save", views.save),
     path("bridge/log", views.log),
     path("bridge/ask", views.ask),
+    path("bridge/status", views.status),
 ]

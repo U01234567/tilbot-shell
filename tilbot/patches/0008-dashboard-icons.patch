@@ -1,0 +1,23 @@
+diff --git a/frontend/src/routes/dashboard/+page.svelte b/frontend/src/routes/dashboard/+page.svelte
+index 7c450b1..3cafe05 100644
+--- a/frontend/src/routes/dashboard/+page.svelte
++++ b/frontend/src/routes/dashboard/+page.svelte
+@@ -216,7 +216,8 @@
+   }
+ 
+   function setProjectInactive(e: MouseEvent) {
+-    const target = e.target as HTMLElement;
++    // currentTarget: the icon itself, also when the click lands on one of the lines it is drawn with
++    const target = e.currentTarget as HTMLElement;
+     const dataset = target.dataset;
+     // confirm() is reactive and therefore can't be inside an async context
+     if (
+@@ -307,7 +308,7 @@
+   }
+ 
+   function importProject(e: Event) {
+-    const target = e.target as HTMLElement;
++    const target = e.currentTarget as HTMLElement; // the icon, not the line inside it that was clicked
+     selectedProjectId = target.dataset.id!;
+     importFileUpload.click();
+   }

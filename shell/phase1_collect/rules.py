@@ -18,6 +18,12 @@ def parse_answer(item: Item, raw: str) -> int:
     return value
 
 
+def questionnaire_done(items: dict[str, Item], answers: dict[str, int]) -> bool:
+    """Whether every item of questionnaire.toml has an answer: only then are there results, and a returning
+    participant skips the questions."""
+    return set(items) <= set(answers)
+
+
 def route_after(item: Item, value: int) -> str:
     """Return the Tilbot connector to follow after this answer."""
     if item.threshold is not None and value >= item.threshold:

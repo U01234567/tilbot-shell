@@ -128,3 +128,22 @@ def test_chat_page_asks_before_signing_out(client, participant, settings):
     session.save()
     page = client.get("/chat").content.decode()
     assert 'id="sign-out-check"' in page and "Really leave?" in page and "js/chat.js" in page
+
+
+def post_status(client, participant, secret=SECRET):
+    return client.post("/bridge/status", {"participant_id": make_token(participant.pk), "bridge_secret": secret})
+
+
+def test_status_tells_tilbot_whether_the_questionnaire_is_done(client, participant):
+    assert post_status(client, participant).json() == {"intent": "new"}
+    Answer.objects.create(participant=participant, item="Q01", value="3")  # STUDY has one item
+    assert post_status(client, participant).json() == {"intent": "returning"}
+    assert post_status(client, participant, secret="wrong").status_code == 403
+
+
+def test_chat_shows_tilbots_header(client, participant, settings):
+    settings.STUDY = dataclasses.replace(STUDY, tilbot_project_id="1" * 32)
+    session = client.session
+    session[SESSION_KEY] = participant.pk
+    session.save()
+    assert "show_header" not in client.get("/chat").content.decode()

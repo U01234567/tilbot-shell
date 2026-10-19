@@ -1,7 +1,7 @@
 import pytest
 
 from config.project import Item
-from phase1_collect.rules import HIGH, SAVED, parse_answer, route_after
+from phase1_collect.rules import HIGH, SAVED, parse_answer, questionnaire_done, route_after
 
 WITH_FOLLOW_UP = Item(id="Q01", scale_min=0, scale_max=10, threshold=7)
 WITHOUT_FOLLOW_UP = Item(id="Q02", scale_min=0, scale_max=10, threshold=None)
@@ -37,3 +37,9 @@ def test_parse_answer_accepts_the_labels(raw, value):
 def test_parse_answer_refuses_an_unknown_word():
     with pytest.raises(ValueError):
         parse_answer(WORDS, "Quite")
+
+
+def test_questionnaire_done_needs_every_item():
+    items = {"Q01": WITH_FOLLOW_UP, "Q02": WITHOUT_FOLLOW_UP}
+    assert not questionnaire_done(items, {"Q01": 3})
+    assert questionnaire_done(items, {"Q01": 3, "Q02": 0})

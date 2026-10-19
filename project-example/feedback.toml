@@ -1,28 +1,22 @@
-# Phase 2: the results a participant sees beside the chat. Leave this file out for a study without results.
+# Phase 2: the results a participant sees beside the chat, once every question is answered.
+# Leave this file out for a study without results.
 # Tilbot's flowchart opens them: a connector with the event "Message to parent window", message show_results
 # (docs/architecture.md). The shell computes each scale from the latest answers; nothing passes through Tilbot.
 
 [texts]
 results = "Your results"   # the panel's title, and the button that opens it again
-intro = "Thank you for answering. Here is what your answers show."
-line = "The line: from here on, it is worth discussing with someone."
-better = "How you are doing"
-better_hint = "A longer bar means you are doing better."
-worse = "Complaints"
-worse_hint = "A longer bar means more trouble."
-worth_discussing = "Worth discussing"
-none = "There are no results yet: answer the questions first."
-print = "Print or save as PDF"
+intro = "This is how the past week went for you."
+worth_discussing = "Worth discussing"   # the label on an orange bar
+none = "There are no results yet: answer all the questions first."
 back = "Back to the chat"   # shown on phones, where the results cover the chat
 
-# One [[scales]] per bar.
+# One [[scales]] per bar. The bar is green when the score is fine and orange past the threshold;
+# the track behind it shows both zones, with a thick line at the threshold.
 # items      ids from questionnaire.toml; a scale is shown once at least half of them are answered
 # higher     "better" or "worse": what a higher score means for the participant
 # reverse    true when a high answer on the items means a low score (for example "trouble walking" on a
 #            scale of functioning); leave it out otherwise
 # threshold  optional, 0–100: worth discussing below it (higher = "better") or above it (higher = "worse")
-# about      optional: one short line on what the scale measures
-# problem    optional: the sentence when the score is worth discussing; fine: the sentence otherwise
 # The score is the mean of the answers' places on their scales, times 100: the EORTC QLQ-C30 method.
 
 [[scales]]
@@ -31,6 +25,3 @@ name = "Example scale"
 items = ["Q01", "Q02"]
 higher = "worse"
 threshold = 50
-about = "What this scale measures, in one short line."
-problem = "This seems to bother you. It may help to talk about it."
-fine = "This does not seem to bother you much."

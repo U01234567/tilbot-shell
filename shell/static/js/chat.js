@@ -1,15 +1,15 @@
 // The chat page (bridge/templates/bridge/chat.html).
 // - Tilbot's flowchart opens the participant's results with a "Message to parent window" event whose
 //   message is show_results. The results themselves come from the shell (/results), never through Tilbot.
-// - Signing out, or leaving the page, before the results were shown loses the participant's place in
-//   the chat (Tilbot starts again), so the page asks first.
+// - Signing out, or leaving the page, before every question is answered loses the participant's place
+//   in the chat (Tilbot starts again), so the page asks first.
 const chat = document.querySelector(".chat");
 const bot = chat.querySelector("iframe");
 const results = document.getElementById("results"); // absent when the study shows no results
 const signOut = document.querySelector(".sign-out");
 const signOutCheck = document.getElementById("sign-out-check");
 let leaving = false; // the participant chose to sign out: don't ask again
-let resultsShown = false; // the questionnaire is done: leaving loses nothing
+let done = bot.dataset.done === "true"; // every question answered: leaving loses nothing
 
 async function showResults() {
   const response = await fetch(results.dataset.url);
@@ -19,7 +19,7 @@ async function showResults() {
   results.innerHTML = await response.text();
   results.hidden = false;
   chat.classList.add("with-results");
-  resultsShown = true;
+  done = true;
 }
 
 function hideResults() {
@@ -44,7 +44,7 @@ signOut.addEventListener("submit", (event) => {
 
 // The browser's own "Leave site?" question; browsers don't let a page choose its words.
 addEventListener("beforeunload", (event) => {
-  if (!leaving && !resultsShown) {
+  if (!leaving && !done) {
     event.preventDefault();
   }
 });
@@ -54,8 +54,6 @@ document.addEventListener("click", (event) => {
     showResults();
   } else if (event.target.closest("[data-results-back]")) {
     hideResults();
-  } else if (event.target.closest("[data-results-print]")) {
-    print();
   } else if (event.target.closest("[data-sign-out]")) {
     leaving = true;
     signOut.requestSubmit();

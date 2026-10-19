@@ -14,9 +14,11 @@ from accounts.session import signed_in_id
 from config.project import NO_TILBOT_PROJECT
 from bridge.tokens import make_token, read_token
 from records.models import Answer, Question, TranscriptLine, latest_answers
-from phase1_collect.rules import parse_answer, route_after
-from phase2_feedback.scoring import scale_score
+from phase1_collect.rules import parse_answer, questionnaire_done, route_after
 from phase3_questions import matching
+
+RETURNING = "returning"  # Tilbot connector at the start: every item is answered, skip the questions
+NEW = "new"  # Tilbot connector at the start: the questionnaire comes first
 
 ANSWERED = "answered"  # Tilbot connector: show the answer, which comes as the connector's label
 UNKNOWN = "unknown"  # Tilbot connector: the knowledge base has no answer
@@ -30,25 +32,27 @@ def chat(request):
         return redirect("home")
     if settings.STUDY.tilbot_project_id == NO_TILBOT_PROJECT:
         return render(request, "bridge/chat.html", {"bot_url": None})
-    query = urlencode({
-        "project": settings.STUDY.tilbot_project_id,
-        "pid": make_token(participant_id),
-        "show_header": 0,
-    })
+    query = urlencode({"project": settings.STUDY.tilbot_project_id, "pid": make_token(participant_id)})
+    done = questionnaire_done(settings.STUDY.items, latest_answers(participant_id))
     return render(request, "bridge/chat.html", {
         "bot_url": f"{settings.BOT_URL}/?{query}",
         "bot_origin": settings.BOT_URL,
-        "has_results": has_results(participant_id),
+        "done": done,  # every item answered: the results button shows, and leaving needs no warning
     })
 
 
-def has_results(participant_id: int) -> bool:
-    """Whether the results panel has something to show yet, so the chat page can offer a button for it."""
-    feedback = settings.STUDY.feedback
-    if feedback is None:
-        return False
-    answers = latest_answers(participant_id)
-    return any(scale_score(scale, settings.STUDY.items, answers) is not None for scale in feedback.scales)
+@csrf_exempt  # called by Tilbot's server, not a browser; BRIDGE_SECRET and the token protect it
+@require_POST
+def status(request):
+    """At the start of every chat: tell Tilbot whether this participant answered every item already."""
+    if not has_secret(request):
+        return HttpResponseForbidden()
+    try:
+        participant_id = read_token(request.POST["participant_id"])
+    except (KeyError, signing.BadSignature) as error:
+        return HttpResponseBadRequest(repr(error))
+    done = questionnaire_done(settings.STUDY.items, latest_answers(participant_id))
+    return JsonResponse({"intent": RETURNING if done else NEW})
 
 
 @csrf_exempt  # called by Tilbot's server, not a browser; BRIDGE_SECRET and the token protect it

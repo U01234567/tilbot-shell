@@ -70,6 +70,7 @@ Each patch is one concern, applied to the pinned commit at build time (`tilbot/p
 | `0005-browser-editor` | the flowchart editor works in the browser, against the server, for your own projects only | researchers need no desktop app; every editor route checks the login |
 | `0006-admin-password` | the first admin password comes from `.env`; Tilbot refuses to create the account without one | no `admin`/`admin` default |
 | `0007-clickable-links` | web addresses (`https://…`) in chat messages become links that open in a new tab | the message is split into text and addresses and shown as text: no HTML is built from it |
+| `0008-dashboard-icons` | the dashboard's Delete and Import icons find their project also when the click lands on a line of the icon | a bug fix: before, deleting a project often did nothing |
 
 ## The bridge contract
 
@@ -104,12 +105,19 @@ The shell stores these lines only when `project.toml` has `transcripts.enabled =
 
 Open the editor from Tilbot's dashboard, with the pencil icon next to the project.
 
-**Once per project:** under Settings, open External processing and add a link:
+**Once per project:** under Settings, open External processing and add two links. Tilbot adds the participant and the secret only to addresses that start with `SHELL_URL` (`http://shell:8000/bridge/`, set in `compose.yaml`). "Send the connectors" stays off for both.
 
-- **Name:** `shell-save`
-- **Address:** `http://shell:8000/bridge/save`. Tilbot adds the participant and the secret only to addresses that start with `SHELL_URL` (`http://shell:8000/bridge/`, set in `compose.yaml`).
-- **Send the user's input:** on
-- **Send the connectors:** off
+| Name | Address | Send the user's input |
+|---|---|---|
+| `shell-status` | `http://shell:8000/bridge/status` | off |
+| `shell-save` | `http://shell:8000/bridge/save` | on |
+
+The bot's name and avatar, shown in the header above the chat, are under Settings too ("Name").
+
+**The first block: has this participant answered everything already?** Make a Processing block "status" the starting block. It uses `shell-status`, without parameters, and has three connectors:
+- `returning` → a block like "Welcome back! You answered all the questions already; your results are below the chat", then on to the questions of phase 3 (or the end)
+- `new` → the welcome and the first question
+- *else* → also the welcome: in the editor's simulator, which can't reach the shell, the questionnaire simply starts
 
 **Per question:**
 
@@ -125,13 +133,13 @@ Labels match on "contains", so `saved` and `high` must never be part of another 
 
 The save calls only work in a chat opened from the shell's chat page, because only that page gives Tilbot a participant token. In the editor's simulator every save goes to *else*. For the same reason the dot on Settings turns red: the editor can't reach the shell, which is expected.
 
-`project-example/tilbot/example.tilbot` is all of the above, ready to import, ending with the results below.
+`project-example/tilbot/example.tilbot` is all of the above, ready to import, ending with the results below. A participant has finished the questionnaire once every item of `questionnaire.toml` has an answer, so the flowchart must ask every item there.
 
 ## Phase 2: the results
 
-A study with `project/feedback.toml` shows the participant's results in a panel beside the chat. The file lists the scales (which items, which direction, the threshold) and every text; `project-example/feedback.toml` explains each line. The shell scores each scale from the latest answers: the mean of the answers' places on their scales, times 100, turned around for a `reverse` scale, once at least half of its items are answered. That is the EORTC QLQ-C30 method.
+A study with `project/feedback.toml` shows the participant's results in a panel beside the chat, once every item is answered. The panel is kept simple: a title, one sentence, and per scale its name and one bar, separated by lines. The track behind each bar is light green where a score is fine and light orange where it is worth discussing, with a thick line at the threshold; the bar itself is green or orange as a whole, and an orange one gets a label. A scale without a threshold gets a neutral bar. The file lists the scales (which items, which direction, the threshold) and the few texts; `project-example/feedback.toml` explains each line. The shell scores each scale from the latest answers: the mean of the answers' places on their scales, times 100, turned around for a `reverse` scale, once at least half of its items are answered. That is the EORTC QLQ-C30 method.
 
-**Opening the results from the flowchart:** on the connector where the results should open (usually after the last save), add an event of the type "Message to parent window", with the message `show_results` and no parameters. Tilbot passes it to the chat page, which checks that it comes from Tilbot's own frame and then loads `/results` from the shell. Participants can open the results again with the button below the chat, once there is something to show.
+**Opening the results from the flowchart:** on the connector where the results should open (usually after the last save), add an event of the type "Message to parent window", with the message `show_results` and no parameters. Tilbot passes it to the chat page, which checks that it comes from Tilbot's own frame and then loads `/results` from the shell. Participants can open the results again with the button below the chat, which shows once every item is answered.
 
 Nothing about the results passes through Tilbot: the message carries no data, and `/results` answers only a signed-in participant, with their own answers.
 
