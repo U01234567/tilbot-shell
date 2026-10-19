@@ -1,0 +1,40 @@
+{% extends "monitor/base.html" %}
+{% load l10n %}
+{% block title %}System · {{ study.name }}{% endblock %}
+{% block page_class %}page wide{% endblock %}
+{% block content %}
+  <h1>System</h1>
+  <p>Every part of the system and who calls whom. Green runs well, orange is starting, red is down. Read from Docker just now.</p>
+  <div class="actions"><a class="button" href="{% url 'system' %}">Refresh</a><a class="button quiet" href="{% url 'researcher' %}">Back</a></div>
+  {% if problem %}<p class="notice">Docker can't be read: {{ problem }}. Is the Docker proxy running? <code>python start_shell.py ps</code></p>{% endif %}
+
+  {% localize off %}
+  <svg class="system" viewBox="-2 -2 744 290" role="img" aria-label="The components and who calls whom">
+    <defs><marker id="head" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 10 5 0 10z"/></marker></defs>
+    {% for x1, y1, x2, y2 in links %}<line class="link" x1="{{ x1 }}" y1="{{ y1 }}" x2="{{ x2 }}" y2="{{ y2 }}" marker-end="url(#head)"/>{% endfor %}
+    {% for c in components %}
+      <g class="node {{ c.health }}">
+        <rect x="{{ c.x }}" y="{{ c.y }}" width="150" height="56" rx="10"/>
+        <text x="{{ c.x|add:12 }}" y="{{ c.y|add:24 }}" class="name">{{ c.name }}</text>
+        <text x="{{ c.x|add:12 }}" y="{{ c.y|add:43 }}">{{ c.word }}</text>
+      </g>
+    {% endfor %}
+  </svg>
+  {% endlocalize %}
+  <p class="hint">In the last hour: Tilbot saved {{ traffic.answers }} answer{{ traffic.answers|pluralize }} and {{ traffic.lines }} chat line{{ traffic.lines|pluralize }} in the shell, and the shell sent {{ traffic.questions }} question{{ traffic.questions|pluralize }} to the intent service.</p>
+
+  <table class="components">
+    <thead><tr><th>Component</th><th>What it does</th><th>Docker says</th><th>CPU</th><th>Memory</th></tr></thead>
+    <tbody>
+      {% for c in components %}
+        <tr><th>{{ c.name }}</th><td>{{ c.role }}</td><td>{{ c.status }}</td><td>{% if c.cpu is not None %}{{ c.cpu|stringformat:".1f" }}%{% endif %}</td><td>{% if c.memory is not None %}{{ c.memory|stringformat:".0f" }} MB{% endif %}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Latest log lines</h2>
+  <p class="hint">The last lines each component wrote, newest at the bottom. Tilbot doesn't write participants' messages here (patch 0010); an error can still quote an answer the shell refused.</p>
+  {% for c in components %}{% if c.log is not None %}
+    <details class="log"><summary>{{ c.name }}</summary><pre>{{ c.log|default:"(nothing yet)" }}</pre></details>
+  {% endif %}{% endfor %}
+{% endblock %}

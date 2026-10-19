@@ -31,6 +31,7 @@ a { color: var(--brand); }
 /* One white card in the middle; on a phone it fills the width, minus a margin. */
 .page { width: min(100% - 2rem, 30rem); margin: 2rem auto; padding: 2rem 1.5rem; background: var(--field); border: 1px solid var(--line); border-radius: var(--radius); }
 .researcher .page { width: min(100% - 2rem, 42rem); }
+.researcher .page.wide { width: min(100% - 2rem, 64rem); }
 h1 { font-size: 1.6rem; line-height: 1.2; margin: 0 0 1.25rem; }
 
 form { display: grid; gap: 1rem; margin-bottom: 1.5rem; }
@@ -105,3 +106,20 @@ body:has(.chat) { height: 100dvh; } /* the chat page never grows past the screen
   .chat.with-results { grid-template: "bot" 1fr "bar" auto / 1fr; }
   .results { position: fixed; inset: 0; z-index: 1; border: 0; }
 }
+
+/* The system page (monitor/system.html): one box per component, coloured by its health, arrows for who calls whom. */
+.system { display: block; width: 100%; height: auto; margin: 1rem 0 .5rem; font: 13px var(--font); }
+.node rect { fill: var(--field); stroke: var(--line); stroke-width: 2; }
+.node .name { font-weight: 700; fill: var(--ink); }
+.node text { fill: var(--muted); }
+.node.up rect { fill: var(--fine-soft); stroke: var(--fine); }
+.node.starting rect { fill: var(--warn-soft); stroke: var(--warn); }
+.node.down rect { fill: #fbe3e6; stroke: var(--error); }
+.node.off rect, .node.outside rect { fill: var(--paper); stroke-dasharray: 5 4; }
+.link { stroke: var(--muted); stroke-width: 1.5; }
+#head path { fill: var(--muted); }
+.components { width: 100%; border-collapse: collapse; margin: 1.5rem 0; font-size: .9rem; }
+.components th, .components td { text-align: left; vertical-align: top; padding: .45rem .6rem .45rem 0; border-bottom: 1px solid var(--line); }
+.log { margin: .4rem 0; }
+.log summary { cursor: pointer; font-weight: 600; }
+.log pre { max-height: 24rem; overflow: auto; margin: .4rem 0 0; padding: .75rem; font-size: .75rem; white-space: pre-wrap; word-break: break-all; background: var(--paper); border-radius: calc(var(--radius) / 2); }

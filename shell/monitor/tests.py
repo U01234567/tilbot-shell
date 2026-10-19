@@ -14,6 +14,7 @@ from django.test import Client
 from accounts.models import Participant
 from accounts.session import SESSION_KEY
 from config.project import Feedback, Item, Scale
+from monitor import system
 from monitor.management.commands.researcher import add_researcher
 from records.models import Answer, Question
 
@@ -151,3 +152,66 @@ def test_backup_cipher_round_trip(monkeypatch):
     assert run("decrypt", sealed) == b"\x00binary dump\xff"
     with pytest.raises(CommandError, match="not made with the FIELD_ENCRYPTION_KEY"):
         run("decrypt", b"something else")
+
+
+# The system page (system.py). Docker itself isn't there in the tests: read_docker is replaced.
+
+@pytest.mark.parametrize("state, status, health", [
+    ("running", "Up 2 hours (healthy)", "up"),
+    ("running", "Up 5 seconds (health: starting)", "starting"),
+    ("running", "Up 3 minutes (unhealthy)", "down"),
+    ("running", "Up 3 minutes", "up"),  # no health check: running is all Docker knows
+    ("exited", "Exited (1) 2 minutes ago", "down"),
+    ("restarting", "Restarting (1) 4 seconds ago", "down"),
+])
+def test_health_from_dockers_status(state, status, health):
+    assert system.health(state, status) == health
+
+
+def test_usage_as_docker_stats_shows_it():
+    stats = {
+        "cpu_stats": {"cpu_usage": {"total_usage": 300}, "system_cpu_usage": 2000, "online_cpus": 4},
+        "precpu_stats": {"cpu_usage": {"total_usage": 100}, "system_cpu_usage": 1000},
+        "memory_stats": {"usage": 5 * 2**20, "stats": {"inactive_file": 2**20}},
+    }
+    assert system.usage(stats) == {"cpu": 80.0, "memory": 4.0}  # 200 / 1000 × 4 cores × 100; 4 MB
+    assert system.usage(None) == {"cpu": None, "memory": None}
+
+
+def test_log_text_joins_dockers_pieces():
+    def piece(stream, text):
+        return bytes([stream, 0, 0, 0]) + len(text).to_bytes(4, "big") + text
+    assert system.log_text(piece(1, b"started\n") + piece(2, b"warning \xc3\xa9\n")) == "started\nwarning é\n"
+
+
+def test_arrows_run_from_box_to_box():
+    assert system.arrow("browser", "caddy") == (150, 156, 190, 156)  # right side to left side
+    assert system.arrow("tilbot-backend", "shell") == (455, 128, 455, 84)  # straight up in one column
+
+
+def test_every_link_joins_two_components():
+    assert {key for link in system.LINKS for key in link} == set(system.COMPONENTS)
+
+
+def test_system_page_needs_a_login(client, db):
+    assert client.get("/researcher/system").status_code == 302
+
+
+def test_system_page_shows_what_docker_says(client, researcher, monkeypatch, settings):
+    settings.STUDY = dataclasses.replace(settings.STUDY, knowledge=None)
+    settings.LANGUAGE_CODE = "nl"  # a decimal point all the same: the researcher pages are English
+    running = {"status": "Up 1 hour (healthy)", "health": "up", "log": "listening <on> 8000", "cpu": 1.5, "memory": 54.2}
+    monkeypatch.setattr(system, "read_docker", lambda: {"shell": running})
+    page = client.get("/researcher/system").content.decode()
+    assert '<g class="node up">' in page and "1.5%" in page and "54 MB" in page
+    assert "listening &lt;on&gt; 8000" in page  # log lines are text, never HTML
+    assert "not used: the study has no knowledge.xlsx" in page  # the intent service without a knowledge base
+    assert "no container: python start_shell.py up" in page  # db, among others
+
+
+def test_system_page_says_when_docker_cant_be_read(client, researcher, monkeypatch):
+    def unreachable():
+        raise OSError("docker-proxy: name not known")
+    monkeypatch.setattr(system, "read_docker", unreachable)
+    page = client.get("/researcher/system").content.decode()
+    assert "Docker can't be read: docker-proxy: name not known" in page and '<g class="node unknown">' in page

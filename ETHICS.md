@@ -42,10 +42,28 @@ Backups made before keep the removed data until they are deleted themselves.
 For those 15 minutes, an attempt's IP address and a participant's sign-up time can be matched to each
 other by whoever reads the database.
 
-Caddy, the web server, keeps no access log. The containers' own output (`docker compose logs`) can
-contain a participant's raw answer when the shell refuses it (an answer off the scale), and error
-messages from Tilbot; those logs live on the machine, are capped at 3 files of 10 MB per service (older lines
-go first), and are not kept after the containers are removed.
+Caddy, the web server, keeps no access log. The containers' own output (`docker compose logs`) holds, in
+development, the addresses the shell was asked for (never a form's content), the knowledge base phrasings the intent service
+compared, and error messages; an error can quote a participant's raw answer when the shell refuses it (an
+answer off the scale). Tilbot itself printed every message a participant typed; patch 0010 stops that
+(below). Those logs live on the machine, are capped at 3 files of 10 MB per service (older lines go first),
+and are not kept after the containers are removed.
+
+## The system page
+
+The researcher dashboard has a page "System" (`/researcher/system`) that shows each component, whether it
+runs, its CPU and memory use, and its last 40 log lines, so the team sees how the system is doing without a
+terminal. Anyone with a researcher account sees it, like the export. It reads this from Docker each time it
+opens and stores nothing.
+
+The shell never talks to Docker itself: Docker's own connection can start containers, read their files and
+their settings (which hold the passwords and keys), and so control the whole machine. A small proxy,
+`docker-proxy` (the open-source `wollomatic/socket-proxy`, at a fixed version), sits in between. It accepts
+calls only from the shell, and passes on only three kinds of reading: the list of containers, a container's
+resource use, and a container's log. Everything else is refused, including a container's settings and files.
+It runs without any of the system's special powers (`cap_drop: ALL`), on a read-only file system, and is
+reachable only inside the Docker network. Should the shell be broken into, this limits what Docker reveals to
+what the page shows.
 
 ## What the participant's browser is given
 
@@ -98,9 +116,10 @@ taken word for word from `knowledge.xlsx`: nothing is generated.
 
 ## Our changes to Tilbot
 
-Tilbot runs with six small patches, listed in `docs/architecture.md`. Two of them matter here: one
+Tilbot runs with ten small patches, listed in `docs/architecture.md`. Three of them matter here: one
 makes Tilbot send conversation events to the shell instead of its own database (so nothing is stored
-in plain text), and one passes the participant token above along with each call to the shell.
+in plain text), one passes the participant token above along with each call to the shell, and one
+(0010) stops Tilbot from printing participants' messages in its log.
 
 ## Keys and access
 

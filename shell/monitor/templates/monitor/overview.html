@@ -12,6 +12,7 @@
   <div class="actions">
     <a class="button" href="{% url 'export' %}">Export the data</a>
     <a class="button quiet" href="{% url 'remove' %}">Remove a participant</a>
+    <a class="button quiet" href="{% url 'system' %}">System: status and logs</a>
     <a class="button quiet" href="/dashboard">Tilbot: flowchart and projects</a>
     <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit" class="quiet">Log out</button></form>
   </div>

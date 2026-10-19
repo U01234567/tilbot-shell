@@ -231,9 +231,18 @@ Every chat starts with a call from Tilbot to the shell (`/bridge/status`): a par
 - **The shell picks a different Tilbot project for returning participants.** No flowchart change, but two projects to keep in step.
 - **Ask everything again.** Simplest, but the participant repeats work, and the latest answers would replace the first.
 
-## Known gaps in version 0.13
+## The system page reads Docker through a proxy
 
-- **Not built yet:** status and logs in the researcher dashboard, backups on a schedule, running on a server, and several versions of a chatbot side by side (participants divided over Tilbot projects).
+The researcher dashboard draws every component and who calls whom, green, orange or red by Docker's health check, with CPU, memory and each component's last log lines (`/researcher/system`). The shell reads Docker through `docker-proxy` (`wollomatic/socket-proxy`), which passes on only the list of containers and a container's resource use and log, and only to the shell. The traffic on the arrows comes from the shell's own records (answers, chat lines and questions of the last hour), so no request log was added. Energy use waits for a server, where it can be measured.
+
+- **Docker's socket in the shell, read-only.** "Read-only" applies to the file, not to what Docker does: the socket can still start containers and read every secret. One break-in in the shell would own the machine.
+- **A ready-made tool (Portainer, Dozzle, Grafana).** Quicker, but another login, logs shown in full, no picture of who calls whom, and much more code to trust.
+- **A command only** (`start_shell.py status`). Simplest, but not the visual overview that was asked for, and not for researchers without a terminal.
+- **Hiding participants' text on the page with patterns.** Fragile: a missed pattern shows it anyway. Tilbot stops writing it instead (patch 0010), which also keeps it out of the logs on disk.
+
+## Known gaps in version 1.0
+
+- **Not built yet:** updates as planned (the new version switched on only after its tests pass, the old one kept to go back to, and a notice in the dashboard when an update exists); the test that runs Tilbot's own engine against the shell, in the repository; backups on a schedule; running on a server; energy use; and several versions of a chatbot side by side (participants divided over Tilbot projects).
 - **A participant can't do the questionnaire again** once every item is answered.
 - **Tilbot's two servers have no health check.** Their API has no call without side effects to check with; the shell, both databases and the matching service do have one.
 - **Matching is tested with a stand-in, not the real model.** The language model is too large for the automated tests; check the matching on the real knowledge base before a study starts, and add phrasings where it misses.

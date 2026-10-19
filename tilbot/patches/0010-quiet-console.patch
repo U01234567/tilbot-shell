@@ -1,0 +1,43 @@
+diff --git a/backend/logger.ts b/backend/logger.ts
+index 224b165..641d5dd 100644
+--- a/backend/logger.ts
++++ b/backend/logger.ts
+@@ -43,7 +43,7 @@ export class Logger implements ProjectControllerLoggerInterface {
+   }
+ 
+   log(event: string, detail = "") {
+-    console.log("Loggging event: " + event + " detail: " + detail);
++    console.log("Loggging event: " + event); // not its detail: that holds the messages (tilbot-shell)
+     if (event == "message_bot" || event == "message_user") {
+       const msg = new MessageModel();
+       msg.source = "bot";
+diff --git a/common/projectcontroller/local.ts b/common/projectcontroller/local.ts
+index 05a0e43..6ca1887 100644
+--- a/common/projectcontroller/local.ts
++++ b/common/projectcontroller/local.ts
+@@ -240,7 +240,7 @@ export class LocalProjectController<
+     setTimeout(
+       () => {
+         console.log(
+-          `sending message '${input}' for block ${JSON.stringify(block)}`,
++          `sending message for block ${JSON.stringify(block)}`, // without the participant's input (tilbot-shell)
+         );
+         this.send_message(block, matchedConnector, input, timeExpired, image);
+       },
+@@ -339,7 +339,6 @@ export class LocalProjectController<
+     output: string[];
+     isElseConnector: boolean;
+   }> {
+-    console.log("Find best connector... " + userInput);
+     let else_connector = null;
+ 
+     let userInputStripped = userInput;
+@@ -675,7 +674,7 @@ export class LocalProjectController<
+       }
+     }
+ 
+-    console.log("Best connector found: " + best.found + ", isElseConnector: " + best.isElseConnector + ", output: " + best.output + ", targets: " + (best.connector ? best.connector.targets : "null"));
++    console.log("Best connector found: " + best.found + ", isElseConnector: " + best.isElseConnector + ", targets: " + (best.connector ? best.connector.targets : "null")); // not its output: that can be the participant's text (tilbot-shell)
+     if (!best.found || (best.isElseConnector && !current_block.prevent_triggers)) {
+       // Check if we need to fire a trigger -- after checking responses to query by the bot!
+       for (const block of Object.values(blocks) as any[]) {

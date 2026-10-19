@@ -50,6 +50,7 @@ Every command runs from the repository root. `start_shell.py` picks the right co
 | "No Tilbot project is linked yet" | Follow [your study, start to finish](#your-study-start-to-finish) |
 | "… is empty in .env, but the database was made with the old value" | Put the value back from your backup (see [Keys](#keys)) |
 | `researcher` says Tilbot refused its admin password | Someone changed it in Tilbot's dashboard. Put the same value in `.env` as `TILBOT_ADMIN_PASSWORD` and run `up`, or reset the admin (next row) |
+| The system page says "Docker can't be read" | `python start_shell.py ps`: is `docker-proxy` running? On Linux with rootless Docker or Podman the socket isn't at `/var/run/docker.sock`; change the line in `compose.yaml` |
 | Tilbot's admin password is lost | Delete only the admin account; projects belong to Tilbot accounts and stay. `python start_shell.py exec mongo mongosh tilbot --eval "db.users.deleteOne({role: 99})"`. The next visit to the login page makes `admin` again, with the password from `.env` |
 
 ## Running a study
@@ -105,6 +106,8 @@ Good to know:
 ## The researcher dashboard and the data export
 
 The shell's own dashboard shows how the study is going and hands out the data: http://127.0.0.1:8081/researcher/ (exactly this address; `localhost:8081` is refused). Log in with the account from [step 1 above](#your-study-start-to-finish). You should see the number of participants, answers and transcript lines, the time of the last answer, and a link to Tilbot's dashboard.
+
+**System.** "System: status and logs" draws every component and who calls whom: green when it runs well, orange while it starts, red when it is down, dashed when the study doesn't use it. Below: what Docker says about each, its CPU and memory, the answers, chat lines and questions of the last hour, and each component's last 40 log lines. It is read from Docker each time you open or refresh the page. The first thing to look at when something seems wrong.
 
 **Export.** "Export the data" offers two choices, each explained on the page:
 - **Without codes:** participants are numbered 1, 2, 3 … in order of sign-up. The files can be joined to each other, but not traced to a person. Use this for analysis.

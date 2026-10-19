@@ -18,6 +18,10 @@ patches = [
   "0004-safe-variable-sql",
   "0005-browser-editor",
   "0006-admin-password",
+  "0007-clickable-links",
+  "0008-dashboard-icons",
+  "0009-study-theme",
+  "0010-quiet-console",
 ]
 note = "First pin, the newest commit on 12 Oct 2026. 0001 and 0002 were made against a zip of the same day, 0003 to 0006 against this commit."
 

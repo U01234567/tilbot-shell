@@ -112,6 +112,30 @@ services:
     volumes:
       - mongo:/data/db
 
+  # The researchers' system page (shell/monitor/system.py) reads Docker through this proxy, never directly:
+  # Docker's own socket can do anything to the computer. The proxy passes on only reading the list of
+  # containers and a container's resource use and log, and only to the shell. It can't start, stop or change
+  # anything, nor read a container's settings (which hold the secrets) or files. No ports are published.
+  docker-proxy:
+    logging: *logging
+    image: wollomatic/socket-proxy:1.13.1
+    restart: unless-stopped
+    command:
+      - -listenip=0.0.0.0
+      - -allowfrom=shell
+      - -allowGET=^/(v1\.[0-9]+/)?containers/(json|[a-zA-Z0-9_.-]+/(logs|stats))$$
+      - -allowhealthcheck
+    user: "0:0"            # the socket belongs to root; the proxy gets none of root's powers (cap_drop)
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    healthcheck:
+      test: ["CMD", "/healthcheck"]
+      interval: 30s
+      retries: 3
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
   # Intent recognition for phase 3. start_shell.py turns on the profile only when project/knowledge.xlsx
   # exists, so a study without questions doesn't download the language model.
   vector-similarity-intent:

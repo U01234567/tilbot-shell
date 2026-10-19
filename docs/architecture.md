@@ -20,10 +20,13 @@ How the parts fit together, where everything lives, and the contract between the
                      │             (inside the Docker network)
                      ▼
    vector-similarity-intent: phase 3, called only by the shell, only when project/knowledge.xlsx exists
+
+   docker-proxy: lets the shell's system page read Docker (containers, resource use, logs), nothing else
 ```
 
 - **The shell is the hub.** Tilbot only calls the shell, and only the shell calls the vector-similarity-intent service.
 - **Participants see two sites.** The shell at `SHELL_HOST` handles sign-up, sign-in and the chat page. Tilbot at `BOT_HOST` is only ever shown inside the shell's chat page, in an iframe.
+- **The system page shows all of this live.** `/researcher/system` draws these parts and who calls whom, each green, orange or red by its health check, with its CPU, memory and latest log lines (`shell/monitor/system.py`). The shell reads Docker only through `docker-proxy`, which passes on just those three readings (ETHICS.md, "The system page").
 - **Tilbot's researcher dashboard is not public.** It sits on port 8081, which only `compose.dev.yaml` publishes, and only to `127.0.0.1`.
 - **The shell's pages look like Tilbot, on a light purple background.** That background and the white cards (`shell/static/css/shell.css`) mark every page the shell serves, and so controls and secures; what shows without it is Tilbot's (its dashboard, and the chat inside the iframe). The researcher pages always carry the mark `tilbot-shell <version> · researcher` and never take the study's colours. The participant pages take the study's colours from `project/theme/tokens.css`, and carry the mark `· development` only while `SHELL_ENV=development`: participants of a real study never see the software's name. The chat inside the iframe can take the study's look too, from `project/theme/tilbot.css` (patch 0009).
 
@@ -48,7 +51,7 @@ How the parts fit together, where everything lives, and the contract between the
 | `shell/phase1_collect/` | rules after each answer: valid? follow-ups? | changing how answers are judged |
 | `shell/phase2_feedback/` | the results: scale scores (`scoring.py`, pure functions) and the panel beside the chat | changing how results are scored or shown |
 | `shell/phase3_questions/` | matching a question to the knowledge base, through vector-similarity-intent (`matching.py`) | changing how questions are matched or answered |
-| `shell/monitor/` | the researcher dashboard: counts, the data export (`export.py`), and removing data (`removal.py`, also used by `erase`) | adding a researcher page |
+| `shell/monitor/` | the researcher dashboard: counts, the data export (`export.py`), removing data (`removal.py`, also used by `erase`), and the system page (`system.py`) | adding a researcher page |
 | `project-example/` | the shape of `project/`, with dummy content | the project format changes |
 | `project/` | the real study, not committed | the research team changes a setting |
 | `docs/` | this file, `decisions.md`, `operations.md` | something here is no longer true |
@@ -72,6 +75,7 @@ Each patch is one concern, applied to the pinned commit at build time (`tilbot/p
 | `0007-clickable-links` | web addresses (`https://…`) in chat messages become links that open in a new tab | the message is split into text and addresses and shown as text: no HTML is built from it |
 | `0008-dashboard-icons` | the dashboard's Delete and Import icons find their project also when the click lands on a line of the icon | a bug fix: before, deleting a project often did nothing |
 | `0009-study-theme` | Tilbot's pages load `/study-theme/tilbot.css` after their own styles: the study's `project/theme/tilbot.css`, served by Caddy on `BOT_HOST` | the chat can take the study's colours and font without changing Tilbot's code; a study without the file keeps Tilbot's look |
+| `0010-quiet-console` | Tilbot's log no longer prints what a participant typed (its input, the matched text, and its own logger's details) | participants' messages stayed in the container logs, readable by anyone with Docker on the machine and on the system page |
 
 ## The bridge contract
 
