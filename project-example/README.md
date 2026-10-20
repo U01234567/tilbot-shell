@@ -16,7 +16,7 @@ Participant data is never in this folder: it stays in the database.
 | `knowledge.xlsx` | the questions participants may ask, with example phrasings, answers and optional links (phase 3); `knowledge-example.xlsx` shows the format: rename a copy to switch phase 3 on | the knowledge base changes |
 | this file | the study's own decisions (below) | one of them is taken |
 
-Restart the shell after a change: `python start_shell.py restart shell`. After adding or removing `knowledge.xlsx`: `python start_shell.py up`, which starts or leaves out the matching service.
+Restart the shell after a change: `python start_shell.py restart shell`. What each change does to a study that is already running: [docs/operations.md](../docs/operations.md#changing-a-running-study). After adding or removing `knowledge.xlsx`: `python start_shell.py up`, which starts or leaves out the matching service.
 
 ## Decisions this study has to take
 

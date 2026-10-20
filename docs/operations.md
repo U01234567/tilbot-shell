@@ -59,7 +59,7 @@ Every command runs from the repository root. `start_shell.py` picks the right co
 |---|---|
 | Start | `python start_shell.py up` |
 | Stop | `python start_shell.py down` |
-| After a change in `project/` | `python start_shell.py restart shell` |
+| After a change in `project/` | `python start_shell.py restart shell` (see [Changing a running study](#changing-a-running-study)) |
 | See what the shell is doing | `python start_shell.py logs -f shell` |
 | Is every service healthy? | `python start_shell.py ps`: the status says `(healthy)`, or `(unhealthy)` with its logs to look at |
 | How many took part, export the data | http://127.0.0.1:8081/researcher/ (see [the researcher dashboard](#the-researcher-dashboard-and-the-data-export)) |
@@ -102,6 +102,25 @@ Good to know:
 - **Transcripts** are stored by the shell, encrypted, when `project/project.toml` has `transcripts.enabled = true` (the default). Tilbot's own logging is off and its switch hidden; nothing is ever written in plain text.
 - **Tilbot's `admin` account** only exists to make Tilbot accounts, and `start_shell.py researcher` uses it for you; its password is `TILBOT_ADMIN_PASSWORD` in `.env`. Don't change that password in Tilbot's dashboard, or the command can no longer make accounts.
 - **Someone who should only build the flowchart,** a student assistant for example: log in to Tilbot's dashboard as `admin` and make their Tilbot account there by hand. They then can't see the participants' data.
+
+## Changing a running study
+
+The two halves of a study take changes differently. **Tilbot** reads its project from its database at the start of every conversation: a change saved in its editor reaches every new chat at once, without a restart. **The shell** reads the files in `project/` once, when it starts: a change there needs `python start_shell.py restart shell`.
+
+| You change | Where | It takes effect | Watch out |
+|---|---|---|---|
+| A question, a follow-up text, the welcome, any message of the bot | Tilbot's editor | for every new chat; a chat already open keeps the old text until its page reloads | a question's wording also stands as `text` in `questionnaire.toml`, shown under the results: change both |
+| When a follow-up comes (`threshold`) | `questionnaire.toml` | after `restart shell`, for answers given from then on | answers given before stay as they were routed |
+| The words on an item's buttons (`labels`) | `questionnaire.toml` **and** the item's buttons in Tilbot's editor | after `restart shell` and saving in Tilbot | the two must say exactly the same; if not, the shell refuses every answer to that item and Tilbot keeps asking it again |
+| An item's `scale` | `questionnaire.toml` (and its buttons in Tilbot) | after `restart shell` | answers are stored as numbers: the results and the export count the old answers on the new scale |
+| Adding an item | `questionnaire.toml` and a question with a save block in Tilbot | after `restart shell` | participants who had answered everything no longer have: their results wait, and they get the questionnaire again |
+| Removing an item | `questionnaire.toml` (and `feedback.toml` if a scale uses it) and Tilbot | after `restart shell` | its answers stay in the database and the export |
+| Scales, thresholds and texts of the results | `feedback.toml` | after `restart shell`, the next time a participant opens the results | the results are computed from the stored answers each time, so everyone sees the new version, also for earlier answers |
+| Texts, age range, genders, time zone, transcripts, the Tilbot project id | `project.toml` | after `restart shell` | |
+| Questions and answers of the knowledge base | `knowledge.xlsx` | after `restart shell` | adding or removing the whole file needs `python start_shell.py up`, which starts or leaves out the matching service |
+| Colours, font, logo, the chat's look | `theme/` | after `restart shell`, at the next page load | |
+
+While the shell restarts (seconds), an answer can't be saved: Tilbot says something went wrong and asks again, so nothing is lost. A mistake in a file of `project/` keeps the shell from starting, with an error that names it: check with `python start_shell.py ps` or the [system page](#the-researcher-dashboard-and-the-data-export) after every restart, and fix it at once, because participants can't sign in meanwhile. Larger changes are safest on a copy first (a second Tilbot project, see "Good to know" above), and with a backup made just before.
 
 ## The researcher dashboard and the data export
 
