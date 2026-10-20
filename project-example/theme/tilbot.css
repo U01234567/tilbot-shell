@@ -10,4 +10,6 @@
    html .btn-outline:hover { color: #ffffff; background-color: #6a2c9e; border-color: #6a2c9e; }
    html .btn-circle:not(.btn-disabled) { color: #ffffff; background-color: #6a2c9e; border-color: #6a2c9e; }  send
    html body { font-family: "My Font", system-ui, sans-serif; }
+   html .chart-line .dot.worth { fill: #b0263a; }    the dots of the small chart of the results in the chat (patch 0011):
+   html .chart-line .dot.fine { fill: #2f8f5b; }     .dot.worth, .dot.fine, .dot (no threshold); the line: .worth-zone, .fine-zone, .track
 */

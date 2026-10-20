@@ -1,6 +1,6 @@
 """Scale scores from the answers. Pure functions: the views fetch the answers, this file only counts."""
 
-from config.project import Item, Scale
+from config.project import Feedback, Item, Scale
 
 
 def scale_score(scale: Scale, items: dict[str, Item], answers: dict[str, int]) -> float | None:
@@ -27,3 +27,21 @@ def worth_discussing(scale: Scale, score: float) -> bool:
     if scale.higher == "better":
         return score < scale.threshold
     return score > scale.threshold
+
+
+def scored(feedback: Feedback, items: dict[str, Item], answers: dict[str, int]) -> list[tuple[Scale, float]]:
+    """Every scale with its score, leaving out a scale with too few answers."""
+    scores = [(scale, scale_score(scale, items, answers)) for scale in feedback.scales]
+    return [(scale, score) for scale, score in scores if score is not None]
+
+
+def state(scale: Scale, score: float) -> str:
+    """fine, worth or neutral (config.project.STATES): which word and which sentence of the scale apply."""
+    if scale.threshold is None:
+        return "neutral"
+    return "worth" if worth_discussing(scale, score) else "fine"
+
+
+def better_is_right(scale: Scale, value: float) -> float:
+    """A score's place on a line where right is always better: so every line reads the same way."""
+    return value if scale.higher == "better" else 100 - value

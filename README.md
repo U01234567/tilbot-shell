@@ -32,7 +32,7 @@ The framework fixes the shape; the project folder fills it in.
 And three phases, always in this order:
 
 1. **Collect.** The bot asks the items of a questionnaire, written in Tilbot's editor. The shell stores each answer and, from thresholds in the project's settings, decides whether follow-up questions come next.
-2. **Feedback.** The shell turns the answers into results beside the chat: a bar per scale, with its threshold and a sentence, scored as in the EORTC QLQ-C30 manual. The flowchart decides when they open.
+2. **Feedback.** The shell turns the answers into results, scored as in the EORTC QLQ-C30 manual: per scale a line from worse to better with the participant's place and the threshold, and the answers behind it. A study chooses where: in a panel beside the chat, in the chat as a short story and a small chart, or both.
 3. **Questions.** The participant asks whatever they want. The shell finds the question in the knowledge base that means most nearly the same, and gives its answer word for word, with a clickable link where there is one.
 
 Everything a study decides (its language and texts, age range, options, thresholds, results, knowledge base, theme, the Tilbot flowchart, and its ethics choices) lives in `project/`, a folder next to `start_shell.py` that is never committed (inside the containers it appears as `/project`). `project-example/` is the empty template and lists what a study has to decide.

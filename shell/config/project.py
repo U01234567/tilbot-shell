@@ -9,9 +9,10 @@ knowledge.xlsx, if the study has one, holds the questions and answers of phase 3
 A mistake in any of them stops the shell with an error that names the problem.
 """
 
+import string
 import tomllib
 import zoneinfo
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import openpyxl
@@ -44,12 +45,15 @@ class Scale:
     reverse: bool  # True when a high answer on the items means a low score
     threshold: float | None  # worth discussing below this ("better") or above it ("worse"); None: never
     ends: tuple[str, ...] = ()  # the words under the line's left (worse) and right (better) end; empty: none
+    story: dict[str, str] = field(default_factory=dict)  # its sentence in the chat, per state (STATES); empty: none
 
 
 @dataclass(frozen=True)
 class Feedback:
     texts: dict[str, str]
     scales: tuple[Scale, ...]
+    show: str = "panel"  # SHOW: the panel beside the chat, a story and a chart in the chat, or both
+    story: dict[str, str] = field(default_factory=dict)  # the story's opening and closing (STORY_KEYS)
 
 
 @dataclass(frozen=True)
@@ -75,6 +79,10 @@ TEXT_KEYS = (
 # Every text of the results panel. feedback.toml must define each one under [texts].
 FEEDBACK_TEXT_KEYS = ("results", "intro", "worth_discussing", "fine", "none", "back")
 HIGHER = ("better", "worse")
+SHOW = ("panel", "chat", "both")
+STORY_KEYS = ("opening", "closing")  # feedback.toml's [story], needed when show is "chat" or "both"
+# A scale's sentence in the chat, per state: within its threshold, past it, or a scale without a threshold.
+STATES = ("fine", "worth", "neutral")
 # The columns of knowledge.xlsx, in its first row. topic, phrasings and link may stay empty.
 KNOWLEDGE_COLUMNS = ("id", "topic", "question", "phrasings", "answer", "link")
 
@@ -150,7 +158,30 @@ def load_feedback(path: Path, item_ids: list[str]) -> Feedback | None:
     ids = [scale.id for scale in scales]
     if len(set(ids)) != len(ids):
         raise ValueError(f"feedback.toml: a scale id is used twice in {ids}")
-    return Feedback(texts=feedback["texts"], scales=scales)
+    show = feedback.get("show", "panel")
+    if show not in SHOW:
+        raise ValueError(f'feedback.toml: show must be one of {", ".join(SHOW)}, not "{show}"')
+    story = feedback.get("story", {})
+    if show != "panel":
+        check_story(story, scales)
+    return Feedback(texts=feedback["texts"], scales=scales, show=show, story=story)
+
+
+def check_story(story: dict[str, str], scales: tuple[Scale, ...]) -> None:
+    """The story in the chat needs its opening and closing, and every scale its sentences, with known blanks."""
+    missing = [key for key in STORY_KEYS if key not in story]
+    if missing:
+        raise ValueError(f"feedback.toml: [story] lacks {', '.join(missing)}")
+    for scale in scales:
+        needed = ("neutral",) if scale.threshold is None else ("fine", "worth")
+        lacking = [state for state in needed if state not in scale.story]
+        if lacking:
+            raise ValueError(f"feedback.toml: scale {scale.id} needs story.{' and story.'.join(lacking)}")
+        blanks = {"name", "answers", *scale.items}
+        for sentence in scale.story.values():
+            unknown = {name for _, name, _, _ in string.Formatter().parse(sentence) if name} - blanks
+            if unknown:
+                raise ValueError(f"feedback.toml: scale {scale.id} has a blank it can't fill: {sorted(unknown)}; it knows {sorted(blanks)}")
 
 
 def parse_scale(raw: dict, item_ids: list[str]) -> Scale:
@@ -173,6 +204,7 @@ def parse_scale(raw: dict, item_ids: list[str]) -> Scale:
         reverse=raw.get("reverse", False),
         threshold=raw.get("threshold"),
         ends=tuple(raw.get("ends", ())),
+        story=raw.get("story", {}),
     )
 
 

@@ -76,6 +76,7 @@ Each patch is one concern, applied to the pinned commit at build time (`tilbot/p
 | `0008-dashboard-icons` | the dashboard's Delete and Import icons find their project also when the click lands on a line of the icon | a bug fix: before, deleting a project often did nothing |
 | `0009-study-theme` | Tilbot's pages load `/study-theme/tilbot.css` after their own styles: the study's `project/theme/tilbot.css`, served by Caddy on `BOT_HOST` | the chat can take the study's colours and font without changing Tilbot's code; a study without the file keeps Tilbot's look |
 | `0010-quiet-console` | Tilbot's log no longer prints what a participant typed (its input, the matched text, and its own logger's details) | participants' messages stayed in the container logs, readable by anyone with Docker on the machine and on the system page |
+| `0011-chat-chart` | a text line `[[line …]]` in a bot message is drawn as a small line with a dot, the chart of the results in the chat; as text, no HTML | how the results look in the chat; the line stays readable as text in a transcript |
 
 ## The bridge contract
 
@@ -106,6 +107,14 @@ The shell replies with `{"intent": "saved"}` or `{"intent": "high"}`, but only a
 
 The shell stores these lines only when `project.toml` has `transcripts.enabled = true`; otherwise it answers 204 and keeps nothing.
 
+**`POST /bridge/feedback`**: the results at the end of the questionnaire (phase 2), as `feedback.toml`'s `show` says.
+
+| Field | From | Example |
+|---|---|---|
+| `part` | Processing-block parameter | `story`, then `chart` |
+
+With `part=story` the shell notes that the results were shown, and how, and replies `{"intent": "panel"}`, or `{"intent": "chat", "connector_label": "<the story>"}`. With `part=chart` it replies `{"intent": "chat"}` or `{"intent": "both"}`, with the chart as the label. A participant who hasn't answered every item yet gets a 4xx reply.
+
 ## Phase 1 in Tilbot's editor
 
 Open the editor from Tilbot's dashboard, with the pencil icon next to the project.
@@ -116,11 +125,12 @@ Open the editor from Tilbot's dashboard, with the pencil icon next to the projec
 |---|---|---|
 | `shell-status` | `http://shell:8000/bridge/status` | off |
 | `shell-save` | `http://shell:8000/bridge/save` | on |
+| `shell-feedback` | `http://shell:8000/bridge/feedback` | off |
 
 The bot's name and avatar, shown in the header above the chat, are under Settings too ("Name").
 
 **The first block: has this participant answered everything already?** Make a Processing block "status" the starting block. It uses `shell-status`, without parameters, and has three connectors:
-- `returning` → a block like "Welcome back! You answered all the questions already; your results are below the chat", then on to the questions of phase 3 (or the end)
+- `returning` → a block like "Welcome back! You answered all the questions already", then on to the questions of phase 3 (or the end). A returning participant doesn't see the results again.
 - `new` → the welcome and the first question
 - *else* → also the welcome: in the editor's simulator, which can't reach the shell, the questionnaire simply starts
 
@@ -142,11 +152,29 @@ The save calls only work in a chat opened from the shell's chat page, because on
 
 ## Phase 2: the results
 
-A study with `project/feedback.toml` shows the participant's results in a panel beside the chat, once every item is answered. The panel is kept simple: a title, one sentence, and per scale a card with its name, a word for how it went (`worth_discussing` or `fine`), one line and the answers behind it. Every line runs from worse (left) to better (right), whatever the scale's own direction, with the words of its `ends` underneath and a dot where the participant is; it is light orange up to the threshold and light green after it, with a thin mark at the threshold. A card worth discussing gets an orange edge; a scale without a threshold gets a neutral dot and no word. Under the line, the scale's questions (their `text` in `questionnaire.toml`) with the participant's answers, in the words of the buttons. No score is shown; the export has them, in their official direction. The file lists the scales (which items, which direction, the threshold) and the few texts; `project-example/feedback.toml` explains each line. The shell scores each scale from the latest answers: the mean of the answers' places on their scales, times 100, turned around for a `reverse` scale, once at least half of its items are answered. That is the EORTC QLQ-C30 method.
+A study with `project/feedback.toml` shows the participant's results once, at the end of the questionnaire, when every item is answered. The file lists the scales (which items, which direction, the threshold) and the texts; `project-example/feedback.toml` explains each line. The shell scores each scale from the latest answers: the mean of the answers' places on their scales, times 100, turned around for a `reverse` scale, once at least half of its items are answered. That is the EORTC QLQ-C30 method. No score is shown; the export has them, in their official direction.
 
-**Opening the results from the flowchart:** on the connector where the results should open (usually after the last save), add an event of the type "Message to parent window", with the message `show_results` and no parameters. Tilbot passes it to the chat page, which checks that it comes from Tilbot's own frame and then loads `/results` from the shell. Participants can open the results again with the button below the chat, which shows once every item is answered.
+`show` in the file chooses how, and one flowchart serves all three, because it asks the shell:
 
-Nothing about the results passes through Tilbot: the message carries no data, and `/results` answers only a signed-in participant, with their own answers.
+- **`panel`**: a panel beside the chat (over it on a phone). A title, one sentence, and per scale a card with its name, a word for how it went (`worth_discussing` or `fine`), one line and the answers behind it. Every line runs from worse (left) to better (right), whatever the scale's own direction, with the words of its `ends` underneath and a dot where the participant is; it is light orange up to the threshold and light green after it, with a thin mark at the threshold. A card worth discussing gets an orange edge; a scale without a threshold gets a neutral dot and no word. Under the line, the scale's questions (their `text` in `questionnaire.toml`) with the participant's answers, in the words of the buttons. A × closes it; the button "results" below the chat opens and closes it again during that visit.
+- **`chat`**: two chat messages. First a short story: the `[story]` opening, one sentence per scale (its `story.fine`, `story.worth` or, without a threshold, `story.neutral`, with the blanks `{name}`, `{answers}` and `{Q01}` filled in from the answers), and the closing. Rule-based: every sentence is the study's own (`phase2_feedback/story.py`). Then a small chart: per scale its name and word, and the same line as on the panel, drawn in the chat by patch 0011 from a text line like `[[line Much pain|No pain|66.7|75.0|worth]]`.
+- **`both`**: the story and the chart in the chat, and the panel as well.
+
+**In the flowchart,** after the last question (`project-example/tilbot/example.tilbot` has all of it):
+
+1. A block "Thank you for your answers!", then a Processing block "feedback" with `shell-feedback` and the parameter `part` = `story`. Its connectors:
+   - `panel` → on to phase 3 or the end, with the event "Message to parent window", message `show_results` and no parameters
+   - `chat` → an Auto block whose content is the previous connector's label (the story)
+   - *else* → a block "I can't show your results right now", then on
+2. After the story, a Processing block "chart" with `shell-feedback` and `part` = `chart`. Its connectors:
+   - `chat` → an Auto block with the previous connector's label (the chart), with the event message `done`
+   - `both` → the same block, with the event message `show_results`
+   - *else* → the same block as above
+3. After the chart, on to phase 3 or the end.
+
+The chat page checks that a message comes from Tilbot's own frame. `show_results` loads `/results` from the shell; `done` tells the page that the questionnaire is over, so leaving it needs no warning.
+
+**What passes through Tilbot:** with `panel`, nothing: the message carries no data, and `/results` answers only a signed-in participant, with their own answers. With `chat` and `both`, the story and the chart go from the shell through Tilbot's server to the chat, like the answers of phase 3, and are kept in the transcript, encrypted, when the study keeps transcripts. The shell notes each time the results are shown, and how; the export has it as `feedback.csv`.
 
 ## Phase 3: questions
 

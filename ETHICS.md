@@ -13,6 +13,7 @@ Check this file against the code before every submission.
 | Every questionnaire answer: item id, value, time | Postgres, table `records_answer` | the value is encrypted (Fernet: AES-128 with HMAC-SHA256) |
 | Every chat message, from the participant and the bot, with its time; only if `project.toml` says `transcripts.enabled = true` | Postgres, table `records_transcriptline` | the text is encrypted, as above |
 | Every question typed in phase 3, with the knowledge base entry it matched and its time; the text only if `transcripts.enabled = true` | Postgres, table `records_question` | the text is encrypted, as above |
+| When the results were shown, and how (panel, chat or both) | Postgres, table `records_feedbackshown` | access to the server; it holds no answers |
 | Which participant a browser is signed in as, and the code shown on the sign-up page | Postgres, table `django_session` | expires after 12 hours, and is deleted at the next start of the shell or backup |
 
 ## Researcher accounts
@@ -27,8 +28,8 @@ The code is the only link between a person and their data. Whoever holds a code 
 
 ## Removing data
 
-A researcher can remove one participant, with all their answers, questions, transcript lines and
-sign-in sessions, from the researcher dashboard ("Remove a participant", by their code), and every
+A researcher can remove one participant, with all their answers, questions, transcript lines, the notes of
+when their results were shown, and their sign-in sessions, from the researcher dashboard ("Remove a participant", by their code), and every
 participant at once at the end of a study (`python start_shell.py erase`). Neither happens automatically.
 Backups made before keep the removed data until they are deleted themselves.
 
@@ -71,9 +72,14 @@ The chat page passes Tilbot an encrypted token that names the participant's row 
 never the code. Whoever reads the page's address can't read the number from it, and can't forge a token.
 It expires after 12 hours.
 
-If the study has `feedback.toml`, the participant sees their own results beside the chat: a score per
-scale, computed from their latest answers each time the results open, and never stored. Only the signed-in
-participant can load their results; Tilbot only sends the signal to open them and never sees the scores.
+If the study has `feedback.toml`, the participant sees their own results once, at the end of the
+questionnaire, computed from their latest answers and never stored as such; the shell only notes when, and
+how. `show` in that file decides how. Beside the chat (`panel`), only the signed-in participant can load their
+results, and Tilbot only sends the signal to open them and never sees them. In the chat (`chat` or `both`),
+a short story and a small chart, made by the shell from the study's own sentences and the answers, go through
+Tilbot's server to the chat, like the answers of phase 3; Tilbot keeps them only in its memory for that
+conversation, and the shell stores them in the transcript, encrypted, when the study keeps transcripts. In
+both cases no score is shown, only words and a dot on a line.
 Whether a result is shown as "worth discussing" comes from the thresholds the study chose; how that is
 worded, so that it never reads as a diagnosis, is the study's responsibility (`project/README.md`).
 
@@ -106,7 +112,7 @@ taken word for word from `knowledge.xlsx`: nothing is generated.
   backup. They are written to `backups/` on the same machine unless the team names another place; copies
   elsewhere, and how long they are kept, are the study's decision (`project/README.md`).
 - **No other participant data**, except exports made by the team. An export (researcher dashboard)
-  contains answers, scale scores, questions and transcripts decrypted, with either the participants' codes or numbers instead;
+  contains answers, scale scores, when and how the results were shown, questions and transcripts decrypted, with either the participants' codes or numbers instead;
   the page explains the difference. Where exports are kept is the study's decision (`project/README.md`).
 - At build time the machine downloads code and images: Tilbot and vector-similarity-intent from
   GitHub, container images from Docker Hub, Python packages from PyPI, Node packages from npm, and
@@ -116,7 +122,7 @@ taken word for word from `knowledge.xlsx`: nothing is generated.
 
 ## Our changes to Tilbot
 
-Tilbot runs with ten small patches, listed in `docs/architecture.md`. Three of them matter here: one
+Tilbot runs with eleven small patches, listed in `docs/architecture.md`. Three of them matter here: one
 makes Tilbot send conversation events to the shell instead of its own database (so nothing is stored
 in plain text), one passes the participant token above along with each call to the shell, and one
 (0010) stops Tilbot from printing participants' messages in its log.

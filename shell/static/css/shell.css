@@ -21,6 +21,7 @@
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; } /* also for buttons, which set their own display */
 /* dvh: the height that stays visible on phones, whose address bar comes and goes */
 body { margin: 0; min-height: 100dvh; display: flex; flex-direction: column; background: var(--paper); color: var(--ink); font: 1rem/1.5 var(--font); }
 a { color: var(--brand); }

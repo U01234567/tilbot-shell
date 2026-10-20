@@ -4,7 +4,7 @@ from django.shortcuts import render
 
 from accounts.session import signed_in_id
 from phase1_collect.rules import questionnaire_done
-from phase2_feedback.scoring import scale_score, worth_discussing
+from phase2_feedback.scoring import better_is_right, scored, worth_discussing
 from records.models import latest_answers
 
 
@@ -19,12 +19,8 @@ def results(request):
         raise Http404
     items = settings.STUDY.items
     answers = latest_answers(participant_id)
-    bars = []
-    if questionnaire_done(items, answers):
-        for scale in feedback.scales:
-            score = scale_score(scale, items, answers)
-            if score is not None:  # a scale with too few answers is left out
-                bars.append(bar(scale, score, given(scale, items, answers)))
+    shown = scored(feedback, items, answers) if questionnaire_done(items, answers) else []
+    bars = [bar(scale, score, given(scale, items, answers)) for scale, score in shown]
     return render(request, "phase2_feedback/results.html", {"texts": feedback.texts, "bars": bars})
 
 
@@ -42,7 +38,3 @@ def bar(scale, score: float, answers: list[tuple[str, str]]) -> dict:
         return drawing
     return {**drawing, "limit": better_is_right(scale, scale.threshold)}
 
-
-def better_is_right(scale, value: float) -> float:
-    """A score's place on the line, where right is always better: so every line reads the same way."""
-    return value if scale.higher == "better" else 100 - value

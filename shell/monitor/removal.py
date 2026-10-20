@@ -7,11 +7,13 @@ from django.db import transaction
 
 from accounts.models import Attempt, Participant
 from accounts.session import SESSION_KEY
-from records.models import Answer, Question, TranscriptLine
+from records.models import Answer, FeedbackShown, Question, TranscriptLine
 
 # Everything stored per participant, in the order it must go: the participant itself is protected
 # (on_delete=PROTECT) as long as any of these still points to it.
-PER_PARTICIPANT = {"answers": Answer, "questions": Question, "transcript lines": TranscriptLine}
+PER_PARTICIPANT = {
+    "answers": Answer, "questions": Question, "transcript lines": TranscriptLine, "results shown": FeedbackShown,
+}
 
 
 def stored_for(participant: Participant) -> dict[str, int]:

@@ -10,7 +10,7 @@ from django.utils.timezone import localtime
 
 from accounts.models import Participant
 from phase2_feedback.scoring import scale_score, worth_discussing
-from records.models import Answer, Question, TranscriptLine, latest_answers
+from records.models import Answer, FeedbackShown, Question, TranscriptLine, latest_answers
 
 
 def participant_label(participant, with_codes: bool, numbers: dict[int, int]) -> str:
@@ -65,10 +65,19 @@ def question_rows(with_codes: bool, numbers: dict[int, int]) -> list[list]:
     return rows
 
 
+def feedback_rows(with_codes: bool, numbers: dict[int, int]) -> list[list]:
+    """Phase 2: when each participant was shown their results, and how (panel, chat or both)."""
+    rows = [["participant", "show", "at"]]
+    for f in FeedbackShown.objects.select_related("participant").order_by("at", "pk"):
+        rows.append([participant_label(f.participant, with_codes, numbers), f.show, localtime(f.at).isoformat()])
+    return rows
+
+
 FILES = {
     "participants": participant_rows,
     "answers": answer_rows,
     "scores": score_rows,
+    "feedback": feedback_rows,
     "questions": question_rows,
     "transcripts": transcript_rows,
 }

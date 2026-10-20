@@ -70,7 +70,7 @@ def traffic() -> dict[str, int]:
 
 @login_required
 def export(request):
-    """A zip of five CSV files, with the participants' codes or with numbers instead (export.py)."""
+    """A zip of six CSV files, with the participants' codes or with numbers instead (export.py)."""
     if request.method != "POST":
         return render(request, "monitor/export.html")
     with_codes = request.POST.get("codes") == "with"

@@ -1,0 +1,71 @@
+diff --git a/frontend/src/lib/components/ChatMessage.svelte b/frontend/src/lib/components/ChatMessage.svelte
+index ddd1dcc..040c259 100644
+--- a/frontend/src/lib/components/ChatMessage.svelte
++++ b/frontend/src/lib/components/ChatMessage.svelte
+@@ -26,6 +26,23 @@
+     return content.split(WEB_ADDRESS); // odd positions hold the addresses
+   }
+ 
++  // A line of its own like [[line Much pain|No pain|67|75|worth]] is drawn as a small line with a dot
++  // (tilbot-shell, patch 0011): the words at its left (worse) and right (better) end, the dot's place and the
++  // threshold's place from 0 to 100 (empty: none), and fine, worth or neutral. As text, no HTML.
++  const CHART_LINE = /^\[\[line ([^\]\n]*)\]\]$/m;
++
++  type ChartLine = { left: string; right: string; at: number; limit: number | null; state: string };
++
++  function chartsAndText(content: string): Array<string | ChartLine> {
++    return content.split(CHART_LINE).map((piece, i) => {
++      if (i % 2 === 0) {
++        return piece.replace(/^\n|\n$/g, ""); // the line breaks around a chart are the chart's own
++      }
++      const [left = "", right = "", at = "0", limit = "", state = "neutral"] = piece.split("|");
++      return { left, right, at: Number(at), limit: limit === "" ? null : Number(limit), state };
++    });
++  }
++
+   function determineLayout(author: string): [string, string] {
+     switch (author) {
+       case "bot":
+@@ -93,11 +110,40 @@
+           <SpeakerWave class="h-4 w-4 inline mr-2" onclick={doTTS} />
+         {/if}
+       {/if}
+-      <!-- on one line, so no spaces are added around a link -->
+-      {#each textAndLinks(message.content) as part, i}{#if i % 2 === 1}<a class="underline" href={part} target="_blank" rel="noopener noreferrer">{part}</a>{:else}{part}{/if}{/each}
++      {#each chartsAndText(message.content) as piece}
++        {#if typeof piece === "string"}
++          <!-- on one line, so no spaces are added around a link -->
++          {#each textAndLinks(piece) as part, i}{#if i % 2 === 1}<a class="underline" href={part} target="_blank" rel="noopener noreferrer">{part}</a>{:else}{part}{/if}{/each}
++        {:else}
++          <svg class="chart-line" viewBox="-5 0 110 12" aria-hidden="true">
++            <clipPath id="chart-line-track"><rect x="-3" y="4" width="106" height="4" rx="2" /></clipPath>
++            <g clip-path="url(#chart-line-track)">
++              <rect class={piece.limit === null ? "track" : "worth-zone"} x="-3" y="4" width="106" height="4" />
++              {#if piece.limit !== null}<rect class="fine-zone" x={piece.limit} y="4" width="106" height="4" />{/if}
++            </g>
++            {#if piece.limit !== null}<line class="limit" x1={piece.limit} x2={piece.limit} y1="2.5" y2="9.5" />{/if}
++            <circle class="dot {piece.state}" cx={piece.at} cy="6" r="4" />
++          </svg>
++          {#if piece.left || piece.right}<span class="chart-ends"><span>{piece.left}</span><span>{piece.right}</span></span>{/if}
++        {/if}
++      {/each}
+       {#if message.image !== undefined}
+         <img src={URL.createObjectURL(message.image)} alt="Attachment to message" class="mt-2" />
+       {/if}
+     </div>
+   </div>
+ {/if}
++
++<style>
++  /* The chart lines of patch 0011, in the colours of the shell's results panel. A study's tilbot.css can
++     change them, for example: html .chart-line .dot.fine { fill: #027d8a; } */
++  .chart-line { display: block; width: 100%; max-width: 18rem; height: auto; margin-top: 0.25rem; overflow: visible; }
++  .track { fill: #e3d5f5; }
++  .worth-zone { fill: #fde3cf; }
++  .fine-zone { fill: #e1f2e7; }
++  .limit { stroke: currentColor; stroke-width: 2px; vector-effect: non-scaling-stroke; }
++  .dot { fill: #6c4199; stroke: #ffffff; stroke-width: 2px; vector-effect: non-scaling-stroke; }
++  .dot.fine { fill: #2f8f5b; }
++  .dot.worth { fill: #c45a12; }
++  .chart-ends { display: flex; justify-content: space-between; gap: 1rem; max-width: 18rem; margin-bottom: 0.5rem; font-size: 0.75rem; opacity: 0.8; }
++</style>

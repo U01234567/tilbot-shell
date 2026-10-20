@@ -5,7 +5,7 @@
 {% block content %}
   {% if bot_url %}
     <iframe src="{{ bot_url }}" title="{{ study.name }}" data-origin="{{ bot_origin }}" data-done="{{ done|yesno:'true,false' }}"></iframe>
-    {% if study.feedback %}
+    {% if study.feedback and study.feedback.show != "chat" %}
       {# Filled and shown by static/js/chat.js when the flowchart says show_results, or the button below is used. #}
       <section id="results" class="results" data-url="{% url 'results' %}" hidden></section>
     {% endif %}
@@ -22,7 +22,8 @@
     <p class="notice">No Tilbot project is linked yet. Put its id in project/project.toml and restart the shell (docs/operations.md).</p>
   {% endif %}
   <div class="chat-bar">
-    {% if done and study.feedback %}<button type="button" class="quiet" data-results-open>{{ study.feedback.texts.results }}</button>{% endif %}
+    {# Shown by chat.js once the panel opened on this visit; a returning participant doesn't see the results again. #}
+    {% if study.feedback and study.feedback.show != "chat" %}<button type="button" class="quiet" data-results-open hidden>{{ study.feedback.texts.results }}</button>{% endif %}
     <form class="sign-out" method="post" action="{% url 'sign_out' %}">
       {% csrf_token %}
       <button type="submit" class="quiet">{{ study.texts.sign_out }}</button>

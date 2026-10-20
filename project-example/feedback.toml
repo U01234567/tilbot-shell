@@ -1,7 +1,13 @@
-# Phase 2: the results a participant sees beside the chat, once every question is answered.
+# Phase 2: the results a participant sees once every question is answered, at the end of the questionnaire.
 # Leave this file out for a study without results.
-# Tilbot's flowchart opens them: a connector with the event "Message to parent window", message show_results
-# (docs/architecture.md). The shell computes each scale from the latest answers; nothing passes through Tilbot.
+# The shell computes each scale from the latest answers. Tilbot's flowchart asks the shell how to show them
+# (the block "feedback", docs/architecture.md), so switching between the ways below needs no flowchart change.
+
+# How the results are shown; switch, then `python start_shell.py restart shell`:
+#   "panel"  beside the chat (over it on a phone): one card per scale, with the answers behind it
+#   "chat"   in the chat: a short story from the sentences below, then a small chart, as two messages
+#   "both"   the story and the chart in the chat, and the panel as well
+show = "panel"
 
 [texts]
 results = "Your results"   # the panel's title, and the button that opens it again
@@ -10,6 +16,11 @@ worth_discussing = "Worth discussing"   # the word on a scale past its threshold
 fine = "Going well"   # the word on a scale within its threshold
 none = "There are no results yet: answer all the questions first."
 back = "Back to the chat"   # what the × that closes the panel says to screen readers
+
+# For "chat" and "both": the story's first and last paragraph. Each scale adds its sentence in between.
+[story]
+opening = "Here is a short summary of your answers."
+closing = "This is an example: a real study writes its own sentences."
 
 # One [[scales]] per card. Each card shows a line from worse (left) to better (right), whatever the scale's
 # direction, with a dot where the participant is: light orange up to the threshold, light green after it.
@@ -20,6 +31,10 @@ back = "Back to the chat"   # what the × that closes the panel says to screen r
 #            scale of functioning); leave it out otherwise
 # threshold  optional, 0–100: worth discussing below it (higher = "better") or above it (higher = "worse")
 # ends       optional: the words under the left (worse) and right (better) end of the line
+# story.*    for "chat" and "both": the scale's sentence in the story, story.fine within the threshold and
+#            story.worth past it, or story.neutral for a scale without a threshold. Blanks the shell fills in:
+#            {name} the scale's name, {answers} the answers behind it, {Q01} the answer to one item, each in
+#            the words of its buttons, starting in lower case.
 # The score is the mean of the answers' places on their scales, times 100: the EORTC QLQ-C30 method.
 
 [[scales]]
@@ -29,3 +44,5 @@ items = ["Q01", "Q02"]
 higher = "worse"
 threshold = 50
 ends = ["Bothers me a lot", "Doesn't bother me"]
+story.fine = "The example bothered you little: {Q01} now, {Q02} yesterday."
+story.worth = "The example bothered you quite a lot: {Q01} now, {Q02} yesterday. That would be worth discussing."

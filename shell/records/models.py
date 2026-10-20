@@ -37,6 +37,14 @@ class Question(models.Model):
     at = models.DateTimeField(auto_now_add=True)
 
 
+class FeedbackShown(models.Model):
+    """The results were shown to a participant at the end of the questionnaire, and how (feedback.toml's show)."""
+
+    participant = models.ForeignKey("accounts.Participant", on_delete=models.PROTECT, related_name="feedback_shown")
+    show = models.CharField(max_length=10)  # panel, chat or both
+    at = models.DateTimeField(auto_now_add=True)
+
+
 def latest_answers(participant_id: int) -> dict[str, int]:
     """Item id -> the participant's answer to it; when an item was answered twice, the latest counts."""
     answers = Answer.objects.filter(participant_id=participant_id).order_by("at", "pk")

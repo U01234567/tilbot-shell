@@ -2,7 +2,7 @@ import pytest
 from django.conf import settings
 from django.core.management import call_command
 
-from config.project import load_study, parse_item, parse_scale
+from config.project import FEEDBACK_TEXT_KEYS, load_feedback, load_study, parse_item, parse_scale
 
 
 @pytest.mark.django_db  # makemigrations checks the migration history in the database
@@ -52,3 +52,28 @@ def test_a_logo_in_the_theme_folder_is_shown(tmp_path):
     (tmp_path / "theme").mkdir()
     (tmp_path / "theme" / "logo.png").write_bytes(b"png")
     assert load_study(tmp_path).logo is True
+
+
+def feedback_file(tmp_path, text):
+    path = tmp_path / "feedback.toml"
+    texts = "".join(f'{key} = "x"\n' for key in FEEDBACK_TEXT_KEYS)
+    path.write_text(f"{text}\n[texts]\n{texts}", encoding="utf-8")
+    return path
+
+
+SCALE = '[[scales]]\nid = "pain"\nname = "Pain"\nitems = ["Q09"]\nhigher = "worse"\nthreshold = 25\n'
+
+
+@pytest.mark.parametrize("text, problem", [
+    ('show = "popup"\n' + SCALE, "show must be one of panel, chat, both"),
+    ('show = "chat"\n' + SCALE, r"\[story\] lacks opening, closing"),
+    ('show = "chat"\n[story]\nopening = "Hi"\nclosing = "Bye"\n' + SCALE + 'story.fine = "Fine"\n', "needs story.worth"),
+    ('show = "chat"\n[story]\nopening = "Hi"\nclosing = "Bye"\n' + SCALE + 'story.fine = "{Q10}"\nstory.worth = "{name}"\n', "Q10"),
+])
+def test_a_story_in_the_chat_is_checked_at_start_up(tmp_path, text, problem):
+    with pytest.raises(ValueError, match=problem):
+        load_feedback(feedback_file(tmp_path, text), ["Q09"])
+
+
+def test_the_panel_needs_no_story(tmp_path):
+    assert load_feedback(feedback_file(tmp_path, SCALE), ["Q09"]).show == "panel"

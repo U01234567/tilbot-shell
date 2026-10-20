@@ -184,7 +184,7 @@ The catch: the two passwords are stored apart, so changing one in a dashboard le
 Phase 2 shows each scale of `project/feedback.toml` (a score from 0 to 100), once every item is answered. Since 19 October 2026 the panel is kept simple and is meant to read without explanation: per scale a card with its name, a word ("worth discussing" or "going well"), and one line from worse to better with a dot where the participant is: light orange up to the threshold, light green after it, with the scale's own words at both ends ("a lot of pain" … "no pain"). Under the line, the questions it is based on, each with the participant's own answer (the question's `text` in `questionnaire.toml`), so every dot maps visibly onto what they just answered; a scale of several items shows all of them. A × closes the panel. The shell draws it (SVG, no chart library) in a panel beside the chat, over it on a phone, and the chat keeps running underneath. The flowchart opens it with Tilbot's own "Message to parent window" event, so Tilbot needs no patch, and the results never pass through Tilbot: the panel fetches them from the shell with the participant's session. Every line reads the same way, better to the right, so a patient learns it once; the panel shows no numbers, so nothing contradicts the export, where scores keep their official direction (higher is better for functioning, worse for complaints).
 
 - **A separate results page.** Simpler, but leaving the chat page ends the conversation: Tilbot starts again from the top when its frame reloads.
-- **Results as chat messages.** Tilbot shows text only, so no lines, and the texts would travel through Tilbot.
+- **Results as chat messages.** Turned down at first (Tilbot shows text only, and the texts travel through Tilbot); since version 1.1 a study can choose them (next section).
 - **Each line in the scale's official direction.** Matches the literature, but a patient has to work out per scale which side is good; with no numbers on the panel, nothing is lost by turning complaints around.
 - **A bar from 0 instead of a dot.** A bar's length reads as "how much", which means trouble for pain and the opposite for functioning; a dot on a line between two named ends reads as "where I am".
 - **More on the panel: a sentence and a definition per scale, groups, an explanation of the line, a print button.** Built first, then left out: participants were given too much at once.
@@ -224,9 +224,20 @@ Signing out shows a question in the study's own words (`sign_out_check` and `sta
 - **Only the sign-out question.** Some find the browser's warning pushy, but a closed tab loses the same place as a sign-out.
 - **Our own leave dialog.** Browsers don't allow one: on leaving, only their own question, in their own words, can appear.
 
+## Results in the chat or beside it, chosen per study
+
+`show` in `feedback.toml` chooses how the results appear at the end of the questionnaire: `panel` (beside the chat), `chat` (a short story, then a small chart, as two chat messages) or `both`. The flowchart asks the shell (`/bridge/feedback`) and has a route for each, so a study, or a developer preparing a demo, switches with one line and `restart shell`. The story is rule-based: per scale the study writes a sentence for "fine", "worth discussing" or no threshold, with blanks the shell fills in from the answers; nothing is generated freely. Tilbot draws the chart's lines with patch 0011. The shell notes for every participant when the results were shown and how (`feedback.csv` in the export), so a study that switches halfway still knows who saw what. A returning participant doesn't see the results again: they come once, at the end of the questionnaire.
+
+- **The setting in `project.toml`.** Everything about the results already lives in `feedback.toml`.
+- **The chart as plain text** (a line of characters). No patch, but no colour, and lines that don't line up in a proportional font.
+- **The chart as an image from the shell.** Needs a patch too, and the image would have to carry the participant's login across sites.
+- **The story and the chart in one message.** Harder to read; two messages cost one block more.
+- **The results again on a return visit,** with a button or a question. More to explain and to build; a returning participant comes for a question.
+- **Dividing participants over panel and chat automatically.** Not asked for: a setting is enough for showing both. The shell decides per call, so this stays a small step for later.
+
 ## A returning participant skips the questions
 
-Every chat starts with a call from Tilbot to the shell (`/bridge/status`): a participant who answered every item already gets a welcome back and goes straight to their questions (phase 3); their results stay under the button below the chat. Everyone else starts the questionnaire. No Tilbot patch: the starting block of the flowchart is a Processing block.
+Every chat starts with a call from Tilbot to the shell (`/bridge/status`): a participant who answered every item already gets a welcome back and goes straight to their questions (phase 3), without seeing the results again. Everyone else starts the questionnaire. No Tilbot patch: the starting block of the flowchart is a Processing block.
 
 - **The shell picks a different Tilbot project for returning participants.** No flowchart change, but two projects to keep in step.
 - **Ask everything again.** Simplest, but the participant repeats work, and the latest answers would replace the first.
@@ -240,7 +251,7 @@ The researcher dashboard draws every component and who calls whom, green, orange
 - **A command only** (`start_shell.py status`). Simplest, but not the visual overview that was asked for, and not for researchers without a terminal.
 - **Hiding participants' text on the page with patterns.** Fragile: a missed pattern shows it anyway. Tilbot stops writing it instead (patch 0010), which also keeps it out of the logs on disk.
 
-## Known gaps in version 1.0
+## Known gaps in version 1.1
 
 - **Not built yet:** updates as planned (the new version switched on only after its tests pass, the old one kept to go back to, and a notice in the dashboard when an update exists); the test that runs Tilbot's own engine against the shell, in the repository; backups on a schedule; running on a server; energy use; and several versions of a chatbot side by side (participants divided over Tilbot projects).
 - **A participant can't do the questionnaire again** once every item is answered.

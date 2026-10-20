@@ -47,6 +47,7 @@ KNOWLEDGE = ROOT / "project" / "knowledge.xlsx"
 # Backups: one folder each, every file encrypted with FIELD_ENCRYPTION_KEY (shell's backup_cipher).
 BACKUPS = ROOT / "backups"  # the default place, kept out of git; copy backups elsewhere too
 BACKUP_FILES = ("shell.dump", "tilbot.archive", "tilbot-files.tar.gz", "project.zip")
+BACKUP_SERVICES = ("shell", "db", "mongo", "tilbot-backend")  # what a backup reads from, and encrypts with
 RESTORE_CHECK = "restore_check"  # a scratch database: every backup is restored into it once, then dropped
 BACKUP_README = """A backup of the study "{study}", made {when}. It restored completely when it was made.
 
@@ -297,6 +298,7 @@ def backup(*args: str) -> Path:
     target = Path(options.folder) if options.folder else BACKUPS / time.strftime("%Y-%m-%d-%H%M%S")
     if target.exists():
         raise ValueError(f"{target} exists already: give another folder")
+    require_running(BACKUP_SERVICES)
     compose("exec", "shell", "python", "manage.py", "clearsessions")  # expired sessions don't go into a backup
     print("Making the backup...")
     parts = take_backup()
@@ -315,6 +317,18 @@ def backup(*args: str) -> Path:
     if options.keep:
         keep_newest(options.keep)
     return target
+
+
+def require_running(services: tuple[str, ...]) -> None:
+    """A backup reads from the running services; stopped ones would only give Docker's "is not running"."""
+    running = compose("ps", "--services", "--status", "running", capture=True).split()
+    stopped = [service for service in services if service not in running]
+    if stopped:
+        raise ValueError(
+            f"not running: {', '.join(stopped)}. A backup, and so an update, reads from the running system. Start "
+            "it as it is with `python start_shell.py start` (or `up` if it was taken down), wait until "
+            "`python start_shell.py ps` says healthy, then try again"
+        )
 
 
 def keep_newest(keep: int) -> None:
