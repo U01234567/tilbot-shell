@@ -1,0 +1,41 @@
+diff --git a/frontend/src/lib/classes/ChatOutput.svelte.ts b/frontend/src/lib/classes/ChatOutput.svelte.ts
+index f67edf1..c8108bd 100644
+--- a/frontend/src/lib/classes/ChatOutput.svelte.ts
++++ b/frontend/src/lib/classes/ChatOutput.svelte.ts
+@@ -86,6 +86,8 @@ export class ChatOutput implements ProjectControllerOutputInterface {
+     if (path) {
+       this.runtimeContext.path = path;
+     }
++    // The project's own settings are here: the header may show its name and avatar (tilbot-shell, patch 0012).
++    (this.settingsContext as any).received = true;
+   }
+ 
+   processMessage(
+diff --git a/frontend/src/lib/components/ChatHeader.svelte b/frontend/src/lib/components/ChatHeader.svelte
+index cdaf794..3d4b1a1 100644
+--- a/frontend/src/lib/components/ChatHeader.svelte
++++ b/frontend/src/lib/components/ChatHeader.svelte
+@@ -4,13 +4,18 @@
+   import { getContext } from "svelte";
+ 
+   const settings: ProjectSettings = getContext("settingsContext");
++  // The page starts with Tilbot's default settings ("Tilbot", no avatar) until the project's own arrive:
++  // show the name and avatar only then, so they don't flash (tilbot-shell, patch 0012).
++  const received = $derived((settings as any).received === true);
+ </script>
+ 
+ <div class="bg-gray-100 w-full h-20 left-0 drop-shadow flex items-center px-4">
+-  {#if settings.show_avatar}
+-    <div class="avatar online placeholder w-12 h-12 mr-4">
+-      <Avatar avatarSource={settings.avatar_file} />
+-    </div>
++  {#if received}
++    {#if settings.show_avatar}
++      <div class="avatar online placeholder w-12 h-12 mr-4">
++        <Avatar avatarSource={settings.avatar_file} />
++      </div>
++    {/if}
++    <div class="text-lg font-medium">{settings.name}</div>
+   {/if}
+-  <div class="text-lg font-medium">{settings.name}</div>
+ </div>

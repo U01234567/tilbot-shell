@@ -77,6 +77,7 @@ Each patch is one concern, applied to the pinned commit at build time (`tilbot/p
 | `0009-study-theme` | Tilbot's pages load `/study-theme/tilbot.css` after their own styles: the study's `project/theme/tilbot.css`, served by Caddy on `BOT_HOST` | the chat can take the study's colours and font without changing Tilbot's code; a study without the file keeps Tilbot's look |
 | `0010-quiet-console` | Tilbot's log no longer prints what a participant typed (its input, the matched text, and its own logger's details) | participants' messages stayed in the container logs, readable by anyone with Docker on the machine and on the system page |
 | `0011-chat-chart` | a text line `[[line …]]` in a bot message is drawn as a small line with a dot, the chart of the results in the chat; as text, no HTML | how the results look in the chat; the line stays readable as text in a transcript |
+| `0012-header-after-settings` | the header above the chat shows the bot's name and avatar only once the project's settings have arrived | before, "Tilbot" and its default avatar flashed for a moment; nothing about data |
 
 ## The bridge contract
 

@@ -23,6 +23,7 @@ patches = [
   "0009-study-theme",
   "0010-quiet-console",
   "0011-chat-chart",
+  "0012-header-after-settings",
 ]
 note = "First pin, the newest commit on 12 Oct 2026. 0001 and 0002 were made against a zip of the same day, 0003 to 0006 against this commit."
 
