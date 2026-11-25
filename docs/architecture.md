@@ -62,22 +62,25 @@ A folder becomes a Django app (listed in `INSTALLED_APPS`) only when it has mode
 
 ## Our patches to Tilbot
 
-Each patch is one concern, applied to the pinned commit at build time (`tilbot/patches/`), and offered upstream.
+Each patch is one concern, applied to the pinned commit at build time (`tilbot/patches/`), and offered upstream. A patch named `…-fix-…` only fixes a bug in Tilbot and changes nothing else; each of them applies on its own to Tilbot's code, so Tilbot's team can take any of them without the rest. The numbers skip 0006 and 0007: Tilbot 2.1 does what they did itself (an admin password it requires, and messages shown as Markdown, links included).
 
 | Patch | Changes | Why it matters for a review |
 |---|---|---|
 | `0001-forward-participant` | Tilbot adds the participant token and the bridge secret to calls to the shell, and only to those | the shell knows who answered; the secret is never typed into a flowchart |
 | `0002-shell-logger` | conversation events go to the shell instead of MongoDB; the dashboard's logging switch is hidden | no transcript is ever stored in plain text |
-| `0003-embed-cross-origin` | the chat works when embedded by another site | a bug fix; nothing about data |
-| `0004-safe-variable-sql` | Tilbot's data tables are read with parameters instead of pasted text | closes an SQL injection a participant could use through the chat |
+| `0003-fix-embed-cross-origin` | the chat works when embedded by another site | a bug fix; nothing about data |
+| `0004-fix-variable-sql-injection` | Tilbot's data tables are read with parameters instead of pasted text | closes an SQL injection a participant could use through the chat |
 | `0005-browser-editor` | the flowchart editor works in the browser, against the server, for your own projects only | researchers need no desktop app; every editor route checks the login |
-| `0006-admin-password` | the first admin password comes from `.env`; Tilbot refuses to create the account without one | no `admin`/`admin` default |
-| `0007-clickable-links` | web addresses (`https://…`) in chat messages become links that open in a new tab | the message is split into text and addresses and shown as text: no HTML is built from it |
-| `0008-dashboard-icons` | the dashboard's Delete and Import icons find their project also when the click lands on a line of the icon | a bug fix: before, deleting a project often did nothing |
+| `0008-fix-dashboard-icons` | the dashboard's Delete and Import icons find their project also when the click lands on a line of the icon | a bug fix: before, deleting a project often did nothing |
 | `0009-study-theme` | Tilbot's pages load `/study-theme/tilbot.css` after their own styles: the study's `project/theme/tilbot.css`, served by Caddy on `BOT_HOST` | the chat can take the study's colours and font without changing Tilbot's code; a study without the file keeps Tilbot's look |
 | `0010-quiet-console` | Tilbot's log no longer prints what a participant typed (its input, the matched text, and its own logger's details) | participants' messages stayed in the container logs, readable by anyone with Docker on the machine and on the system page |
-| `0011-chat-chart` | a text line `[[line …]]` in a bot message is drawn as a small line with a dot, the chart of the results in the chat; as text, no HTML | how the results look in the chat; the line stays readable as text in a transcript |
-| `0012-header-after-settings` | the header above the chat shows the bot's name and avatar only once the project's settings have arrived | before, "Tilbot" and its default avatar flashed for a moment; nothing about data |
+| `0011-chat-chart` | a text line `[[line …]]` in a bot message is drawn as a small line with a dot, the chart of the results in the chat; the rest of the message stays Markdown | how the results look in the chat; the line stays readable as text in a transcript |
+| `0012-fix-header-flash` | the header above the chat shows the bot's name and avatar only once the project's settings have arrived | before, "Tilbot" and its default avatar flashed for a moment; nothing about data |
+| `0013-markdown-without-html` | Tilbot shows messages as Markdown but shows any HTML tag in them as plain text (the renderer's own switch, `buildUnsupportedHTML`) | a message, which can repeat what a participant typed, can never build page content |
+| `0014-fix-random-row-variable` | inserting a data table's "Random row" in the editor works; before, Save in that dialog stopped with an error | a bug fix in the editor; nothing about data |
+| `0015-fix-random-row-in-message` | a data table's "Random row" in a message shows the row's values; before, the chat stopped there, in every Tilbot version | a bug fix; nothing about data |
+| `0016-fix-password-change-reply` | changing your password in Tilbot's dashboard says it worked when it did; before, it always said the old password was wrong, even after saving the new one | a bug fix; nothing about data |
+| `0017-fix-message-indent` | with an avatar shown, a bot's second and later messages line up under the first, as in Tilbot 2.0, and so does the typing indicator; before, Tilbot 2.1 started them at the edge | a bug fix; nothing about data |
 
 ## The bridge contract
 
@@ -145,11 +148,11 @@ The bot's name and avatar, shown in the header above the chat, are under Setting
 
 Tilbot follows *else* when a call fails, so a failed save can never move on silently.
 
-Labels match on "contains", so `saved` and `high` must never be part of another label on the same block.
+Let these labels match exactly ("exact", the editor's default for a new connector). A label set to "contains" matches when the word is anywhere in the reply, so then `saved` and `high` must never be part of another label on the same block.
 
 The save calls only work in a chat opened from the shell's chat page, because only that page gives Tilbot a participant token. In the editor's simulator every save goes to *else*. For the same reason the dot on Settings turns red: the editor can't reach the shell, which is expected.
 
-`project-example/tilbot/example.tilbot` is all of the above, ready to import, ending with the results below. A participant has finished the questionnaire once every item of `questionnaire.toml` has an answer, so the flowchart must ask every item there.
+`project-example/tilbot/example.tilbot` is all of the above, ready to import, followed by the results and the questions below. A participant has finished the questionnaire once every item of `questionnaire.toml` has an answer, so the flowchart must ask every item there.
 
 ## Phase 2: the results
 
@@ -188,9 +191,11 @@ A study with `project/knowledge.xlsx` answers the participant's own questions. T
 | `question` | the question as a participant might ask it | yes |
 | `phrasings` | other ways to ask the same, one per line (Alt+Enter in Excel) | no |
 | `answer` | the answer, exactly as the participant will read it | yes |
-| `link` | a web address shown under the answer, clickable (patch 0007) | no |
+| `link` | a web address shown under the answer, as a link | no |
 
 `project-example/knowledge-example.xlsx` is a filled-in example: rename a copy to `knowledge.xlsx` to switch phase 3 on. With the file present, `start_shell.py` also starts vector-similarity-intent; its first start downloads the language model (about 500 MB, once). The model is Dutch by default; a study in another language sets `INTENT_MODEL` in `.env` to a sentence-transformers model for its language.
+
+Tilbot shows the answer as Markdown: `**bold**`, lists and `[text](https://…)` work, and a lone `*` or `_` can turn text italic.
 
 The shell sends the participant's question and every question and phrasing to vector-similarity-intent, which returns the one closest in meaning, or nothing when none is close enough. The participant gets that entry's answer word for word: nothing is generated.
 
@@ -202,6 +207,8 @@ The shell sends the participant's question and every question and phrasing to ve
    - `unknown` → a block saying the bot has no answer (and who does), back to step 1
    - `busy` → a block saying to try again in an hour: one participant may ask 30 questions an hour (`QUESTIONS_PER_HOUR` in `bridge/views.py`), back to step 1
    - *else* → "Something went wrong, let's try that again", back to step 1
+
+`project-example/tilbot/example.tilbot` ends with this loop. Without `project/knowledge.xlsx` the shell can't answer, so there every question gets the *else* block ("I can't answer questions right now").
 
 The shell keeps every question with the entry it was matched to (table `records_question`); the question's text only when the study keeps transcripts.
 

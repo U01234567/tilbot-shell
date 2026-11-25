@@ -12,10 +12,10 @@ index 224b165..641d5dd 100644
        const msg = new MessageModel();
        msg.source = "bot";
 diff --git a/common/projectcontroller/local.ts b/common/projectcontroller/local.ts
-index 05a0e43..6ca1887 100644
+index e0aeb32..4cc51f5 100644
 --- a/common/projectcontroller/local.ts
 +++ b/common/projectcontroller/local.ts
-@@ -240,7 +240,7 @@ export class LocalProjectController<
+@@ -301,7 +301,7 @@ export class LocalProjectController<
      setTimeout(
        () => {
          console.log(
@@ -24,7 +24,7 @@ index 05a0e43..6ca1887 100644
          );
          this.send_message(block, matchedConnector, input, timeExpired, image);
        },
-@@ -339,7 +339,6 @@ export class LocalProjectController<
+@@ -358,7 +358,6 @@ export class LocalProjectController<
      output: string[];
      isElseConnector: boolean;
    }> {
@@ -32,12 +32,13 @@ index 05a0e43..6ca1887 100644
      let else_connector = null;
  
      let userInputStripped = userInput;
-@@ -675,7 +674,7 @@ export class LocalProjectController<
-       }
-     }
- 
--    console.log("Best connector found: " + best.found + ", isElseConnector: " + best.isElseConnector + ", output: " + best.output + ", targets: " + (best.connector ? best.connector.targets : "null"));
-+    console.log("Best connector found: " + best.found + ", isElseConnector: " + best.isElseConnector + ", targets: " + (best.connector ? best.connector.targets : "null")); // not its output: that can be the participant's text (tilbot-shell)
-     if (!best.found || (best.isElseConnector && !current_block.prevent_triggers)) {
-       // Check if we need to fire a trigger -- after checking responses to query by the bot!
-       for (const block of Object.values(blocks) as any[]) {
+@@ -855,8 +854,7 @@ export class LocalProjectController<
+         best.found +
+         ", isElseConnector: " +
+         best.isElseConnector +
+-        ", output: " +
+-        best.output +
++        // not the output: that can be the participant's text (tilbot-shell)
+         ", targets: " +
+         (best.connector ? best.connector.targets : "null"),
+     );

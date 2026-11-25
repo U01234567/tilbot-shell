@@ -9,6 +9,9 @@
 # Made by `python start_shell.py trust`; belongs to this computer only.
 /caddy-root.crt
 
+# Written by `python start_shell.py up`: which commits ran on this computer, and when.
+/versions.log
+
 # Python
 __pycache__/
 *.pyc

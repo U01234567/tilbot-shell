@@ -37,7 +37,7 @@ index 394c08f..2d9f92a 100644
         * Retrieve this project's logs
         *
 diff --git a/backend/server.ts b/backend/server.ts
-index d0a5d29..e01ad52 100644
+index 2cb6fb3..9a887c0 100644
 --- a/backend/server.ts
 +++ b/backend/server.ts
 @@ -1,7 +1,7 @@
@@ -50,7 +50,7 @@ index d0a5d29..e01ad52 100644
  import { fastifySession } from "@fastify/session";
  import { fastifyCookie } from "@fastify/cookie";
  import fastifyCORS from "@fastify/cors";
-@@ -406,6 +406,137 @@ app.post("/api/import_project", async (req, res) => {
+@@ -418,6 +418,137 @@ app.post("/api/import_project", async (req, res) => {
    await project.save();
  });
  
@@ -188,7 +188,7 @@ index d0a5d29..e01ad52 100644
  /**
   * API call: save a user's settings
   */
-@@ -525,6 +656,7 @@ app.get("/api/create_conversation", async (req, res) => {
+@@ -537,6 +668,7 @@ app.get("/api/create_conversation", async (req, res) => {
    const settings = await SettingsModel.findOne({ user_id: project.user_id });
  
    const p = `${__dirname}/projects/${project.id}`;
@@ -197,15 +197,15 @@ index d0a5d29..e01ad52 100644
    const db = new VariableDb(p + "/variables.db");
  
 diff --git a/frontend/package.json b/frontend/package.json
-index d6d7181..fb3c7d2 100644
+index f823c00..f274bb3 100644
 --- a/frontend/package.json
 +++ b/frontend/package.json
-@@ -32,6 +32,7 @@
-     "crypto-js": "^4.1.1",
-     "daisyui": "^4.12.21",
-     "lodash": "^4.17.21",
-+    "read-excel-file": "^8.0.3",
-     "svelte-heros-v2": "^2.0.1"
+@@ -37,6 +37,7 @@
+     "crypto-js": "^4.2.0",
+     "daisyui": "^5.7.50",
+     "lodash": "^4.18.1",
++    "read-excel-file": "^9.3.12",
+     "svelte-heros-v2": "^3.0.1"
    }
  }
 diff --git a/frontend/src/lib/utils/serverEditorApi.ts b/frontend/src/lib/utils/serverEditorApi.ts
@@ -315,7 +315,7 @@ index 0000000..3209304
 +  });
 +}
 diff --git a/frontend/src/routes/+page.svelte b/frontend/src/routes/+page.svelte
-index d91ea8f..79c9d88 100644
+index 3390855..9666fc1 100644
 --- a/frontend/src/routes/+page.svelte
 +++ b/frontend/src/routes/+page.svelte
 @@ -106,7 +106,10 @@
@@ -394,7 +394,7 @@ index b17de76..7c450b1 100644
                        <Trash
                          onclick={setProjectInactive}
 diff --git a/frontend/src/routes/editor/+page.svelte b/frontend/src/routes/editor/+page.svelte
-index 4cb08f7..19f305a 100644
+index 3ec5aab..5e94469 100644
 --- a/frontend/src/routes/editor/+page.svelte
 +++ b/frontend/src/routes/editor/+page.svelte
 @@ -1,6 +1,7 @@
@@ -408,8 +408,8 @@ index 4cb08f7..19f305a 100644
 @@ -12,6 +13,7 @@
    } from "../../../../common/project/types";
    import { defaultProject } from "../../../../common/project/types";
-   import { setOrDelete, testConnection } from "$lib/utils/functions";
-+  import { serverEditorApi } from "$lib/utils/serverEditorApi";
+   import { setOrDelete, testConnection } from "#lib/utils/functions";
++  import { serverEditorApi } from "#lib/utils/serverEditorApi";
    import Variables from "./variables.svelte";
    import Settings from "./settings.svelte";
    import Draggable from "./draggable.svelte";
@@ -453,7 +453,7 @@ index 4cb08f7..19f305a 100644
        window.location.href = "/dashboard/";
      }
  
-@@ -874,7 +899,9 @@
+@@ -876,7 +901,9 @@
  
        <li>&nbsp;<br /><br /></li>
  
@@ -465,14 +465,14 @@ index 4cb08f7..19f305a 100644
      </ul>
    </div>
 diff --git a/yarn.lock b/yarn.lock
-index 9df6628..2472130 100644
+index 10b5a87..6e087ac 100644
 --- a/yarn.lock
 +++ b/yarn.lock
-@@ -5456,6 +5456,7 @@ __metadata:
-     del-cli: "npm:^5.1.0"
-     lodash: "npm:^4.17.21"
-     postcss: "npm:^8.5.4"
-+    read-excel-file: "npm:^8.0.3"
-     svelte: "npm:5.33.13"
-     svelte-check: "npm:^4.2.1"
-     svelte-heros-v2: "npm:^2.0.1"
+@@ -4244,6 +4244,7 @@ __metadata:
+     del-cli: "npm:^8.0.1"
+     lodash: "npm:^4.18.1"
+     postcss: "npm:^8.5.31"
++    read-excel-file: "npm:^9.3.12"
+     svelte: "npm:^5.57.2"
+     svelte-check: "npm:^4.7.7"
+     svelte-heros-v2: "npm:^3.0.1"

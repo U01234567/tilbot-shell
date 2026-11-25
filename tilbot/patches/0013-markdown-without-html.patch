@@ -1,0 +1,33 @@
+diff --git a/frontend/src/lib/components/ChatMessage.svelte b/frontend/src/lib/components/ChatMessage.svelte
+index 9a747d3..c109ffc 100644
+--- a/frontend/src/lib/components/ChatMessage.svelte
++++ b/frontend/src/lib/components/ChatMessage.svelte
+@@ -3,7 +3,7 @@
+   import Avatar from "./Avatar.svelte";
+   import { getContext } from "svelte";
+   import { SpeakerWave, Stop } from "svelte-heros-v2";
+-  import SvelteMarkdown from "@humanspeak/svelte-markdown";
++  import SvelteMarkdown, { buildUnsupportedHTML } from "@humanspeak/svelte-markdown";
+   import type { Message, NewBotMessageBlock } from "#lib/types/types.ts";
+   import type { ProjectSettings } from "../../../../common/project/types";
+   const settings: ProjectSettings = getContext("settingsContext");
+@@ -18,6 +18,10 @@
+ 
+   let playingTTS: boolean = $state(false);
+ 
++  // Markdown yes, HTML no: an HTML tag in a message is shown as plain text, so a message can never build page content
++  // (tilbot-shell, patch 0013). The library's own switch for this.
++  const NO_HTML = { html: buildUnsupportedHTML() };
++
+   // A line of its own like [[line Much pain|No pain|67|75|worth]] is drawn as a small line with a dot
+   // (tilbot-shell, patch 0011): the words at its left (worse) and right (better) end, the dot's place and the
+   // threshold's place from 0 to 100 (empty: none), and fine, worth or neutral. The rest stays Markdown.
+@@ -114,7 +118,7 @@
+         <div>
+           {#each chartsAndText(message.content) as piece}
+             {#if typeof piece === "string"}
+-              <SvelteMarkdown source={piece}>
++              <SvelteMarkdown source={piece} renderers={NO_HTML}>
+                   {#snippet link({ href, title, children })}
+                       <a {href} {title} target="_blank" rel="noopener noreferrer">
+                           {@render children?.()}

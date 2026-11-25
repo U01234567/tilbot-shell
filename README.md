@@ -48,4 +48,4 @@ Everything a study decides (its language and texts, age range, options, threshol
 
 Developed on Windows 11 with Python 3.14, Docker Desktop 29.8 (Docker Compose included) and Git.
 macOS and Linux need no changes; type `python3` where this README says `python`.
-Inside the containers: Python 3.12 (the shell), Node 26 (Tilbot), Postgres 17, MongoDB 8.3 and Caddy 2.10.
+Inside the containers: Python 3.12 (the shell), Node 26 (Tilbot 2.1), Postgres 17, MongoDB 8.3 and Caddy 2.10.

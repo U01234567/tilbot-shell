@@ -1,17 +1,17 @@
 diff --git a/backend/server.ts b/backend/server.ts
-index 655b3c7..d0a5d29 100644
+index 2067bc1..2cb6fb3 100644
 --- a/backend/server.ts
 +++ b/backend/server.ts
 @@ -34,6 +34,8 @@ import {
-   ServerControllerOutput,
  } from "./projectcontroller.ts";
  import { Logger } from "./logger.ts";
+ import { SessionStore } from "./sessionstore.ts";
 +import { ShellLogger } from "./shelllogger.ts";
 +import type { ProjectControllerLoggerInterface } from "../common/projectcontroller/types";
  
  import { VariableDb } from "../common/variabledb.ts";
  import { NonLogger } from "../common/projectcontroller/nonlogger.ts";
-@@ -257,6 +259,8 @@ app.get("/api/get_dashboard", async (req, res) => {
+@@ -269,6 +271,8 @@ app.get("/api/get_dashboard", async (req, res) => {
        active: true,
      });
      data.settings = await user.getPermittedSettings();
@@ -20,7 +20,7 @@ index 655b3c7..d0a5d29 100644
    }
    return JSON.stringify(data);
  });
-@@ -527,7 +531,7 @@ app.get("/api/create_conversation", async (req, res) => {
+@@ -539,7 +543,7 @@ app.get("/api/create_conversation", async (req, res) => {
    const projectController = new LocalProjectController(
      new ServerControllerLookup(db, false, participantId),
      new ServerControllerOutput(),
@@ -29,7 +29,7 @@ index 655b3c7..d0a5d29 100644
      project
    );
  
-@@ -605,6 +609,18 @@ app.get("/ws/chat", { websocket: true }, async (socket, req) => {
+@@ -625,6 +629,18 @@ app.get("/ws/chat", { websocket: true }, async (socket, req) => {
    });
  });
  

@@ -5,6 +5,7 @@
 
    Examples (start each rule with "html" so it wins over Tilbot's):
    html .chat-bubble.bg-tilbot-secondary-purple { background-color: #f4f4f4; color: #1d1d1b; }  the bot's messages
+   html .chat-bubble .loading { color: #1d1d1b; }                                                   its typing dots (white in Tilbot)
    html .chat-bubble.bg-tilbot-secondary-hardpink { background-color: #6a2c9e; color: #ffffff; }  the participant's
    html .btn-outline { color: #6a2c9e; border-color: #6a2c9e; }                                   answer buttons
    html .btn-outline:hover { color: #ffffff; background-color: #6a2c9e; border-color: #6a2c9e; }

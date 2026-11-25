@@ -36,16 +36,17 @@ ROOT = Path(__file__).resolve().parent
 PINNED = ("tilbot", "vector-similarity-intent")
 SECRETS = (
     "DJANGO_SECRET_KEY", "BRIDGE_SECRET", "TILBOT_SESSION_SECRET", "TILBOT_ADMIN_PASSWORD",
-    "POSTGRES_PASSWORD", "FIELD_ENCRYPTION_KEY",
+    "POSTGRES_PASSWORD", "FIELD_ENCRYPTION_KEY", "MONGO_ROOT_PASSWORD", "MONGO_TILBOT_PASSWORD",
 )
 # A new value for these locks out what is already stored, so they are never replaced once a database exists.
-DATA_SECRETS = {"POSTGRES_PASSWORD", "FIELD_ENCRYPTION_KEY"}
+DATA_SECRETS = {"POSTGRES_PASSWORD", "FIELD_ENCRYPTION_KEY", "MONGO_ROOT_PASSWORD", "MONGO_TILBOT_PASSWORD"}
 DATABASE_VOLUME = "tilbot-shell_db"  # the "db" volume of compose project "tilbot-shell"
 CA_VOLUME = "tilbot-shell-caddy-ca"  # external in compose.yaml, so `down -v` keeps it
 # A study with a knowledge base answers questions (phase 3): only then does vector-similarity-intent run.
 KNOWLEDGE = ROOT / "project" / "knowledge.xlsx"
 # Backups: one folder each, every file encrypted with FIELD_ENCRYPTION_KEY (shell's backup_cipher).
 BACKUPS = ROOT / "backups"  # the default place, kept out of git; copy backups elsewhere too
+VERSIONS_LOG = ROOT / "versions.log"  # one line per `up`: the commits that ran, to go back to; kept out of git
 BACKUP_FILES = ("shell.dump", "tilbot.archive", "tilbot-files.tar.gz", "project.zip")
 BACKUP_SERVICES = ("shell", "db", "mongo", "tilbot-backend")  # what a backup reads from, and encrypts with
 RESTORE_CHECK = "restore_check"  # a scratch database: every backup is restored into it once, then dropped
@@ -149,8 +150,8 @@ def ensure_env() -> None:
     database = subprocess.run(["docker", "volume", "inspect", DATABASE_VOLUME], capture_output=True)
     if locked_out and database.returncode == 0:
         raise ValueError(
-            f"{' and '.join(sorted(locked_out))} is empty in .env, but the database was made with the old value. "
-            "Put the old value back from your backup. Only if nothing stored matters: python start_shell.py down -v"
+            f"{' and '.join(sorted(locked_out))} is empty in .env, but a database already exists. If .env had a value "
+            "before, put it back from your backup. Only if nothing stored matters: python start_shell.py down -v"
         )
     env_file.write_text(text, encoding="utf-8")
     print(f"Filled in new values in .env for {', '.join(filled)}.")
@@ -198,6 +199,7 @@ def up() -> list[str]:
         print("project/knowledge.xlsx found: phase 3 is on. Its first start downloads a language model (about 500 MB).")
     subprocess.run(["docker", "volume", "create", CA_VOLUME], capture_output=True, check=True)
     compose("up", "--build", "--detach")
+    log_version()
     # Docker can't see a changed Caddyfile, so Caddy is told to read it again; running requests go on.
     compose("exec", "caddy", "caddy", "reload", "--config", "/etc/caddy/Caddyfile")
 
@@ -240,6 +242,25 @@ def study_name() -> str:
     return tomllib.loads((ROOT / "project" / "project.toml").read_text(encoding="utf-8"))["name"]
 
 
+def log_version() -> None:
+    """Add the commits this start built to versions.log, so an accidental update can be undone."""
+    git = shutil.which("git")
+    head = subprocess.run([git, "rev-parse", "HEAD"], cwd=ROOT, capture_output=True, text=True) if git else None
+    shell = head.stdout.strip() if head and head.returncode == 0 else "unknown (not a git clone)"
+    components = read_components()
+    pins = "  ".join(f"{name} {components[name]['commit']}" for name in PINNED)
+    line = f"{time.strftime('%Y-%m-%d %H:%M')}  tilbot-shell {shell}  {pins}"
+    with VERSIONS_LOG.open("a", encoding="utf-8") as log:
+        log.write(line + "\n")
+    print(f"Added to versions.log: {line}")
+
+
+def mongo(tool: str) -> tuple[str, ...]:
+    """A MongoDB tool in its container, logged in as Tilbot with the container's own settings."""
+    login = '--username "$MONGO_TILBOT_USER" --password "$MONGO_TILBOT_PASSWORD" --authenticationDatabase admin'
+    return ("exec", "-T", "mongo", "sh", "-c", f"{tool} {login}")
+
+
 def cipher(direction: str, data: bytes) -> bytes:
     """Encrypt or decrypt with FIELD_ENCRYPTION_KEY, inside the shell's container (records/management/commands)."""
     return compose_bytes("exec", "-T", "shell", "python", "manage.py", "backup_cipher", direction, data=data)
@@ -259,7 +280,7 @@ def take_backup() -> dict[str, bytes]:
     user, name = database()
     return {
         "shell.dump": compose_bytes("exec", "-T", "db", "pg_dump", "-U", user, "-Fc", name),
-        "tilbot.archive": compose_bytes("exec", "-T", "mongo", "mongodump", "--db", "tilbot", "--archive", "--gzip"),
+        "tilbot.archive": compose_bytes(*mongo("mongodump --db tilbot --archive --gzip")),
         "tilbot-files.tar.gz": compose_bytes("exec", "-T", "tilbot-backend", "tar", "-czf", "-", "projects", "proj_pub"),
         "project.zip": zip_folder(ROOT / "project"),
     }
@@ -280,7 +301,7 @@ def check_backup(parts: dict[str, bytes]) -> None:
         count = compose_bytes(*db, "psql", "-U", user, "-d", RESTORE_CHECK, "-tAc", "select count(*) from accounts_participant")
     finally:
         compose_bytes(*db, "dropdb", "-U", user, "--if-exists", RESTORE_CHECK)
-    compose_bytes("exec", "-T", "mongo", "mongorestore", "--archive", "--gzip", "--dryRun", data=parts["tilbot.archive"])
+    compose_bytes(*mongo("mongorestore --archive --gzip --dryRun"), data=parts["tilbot.archive"])
     tarfile.open(fileobj=io.BytesIO(parts["tilbot-files.tar.gz"]), mode="r:gz").getnames()  # reads it to the end
     if zipfile.ZipFile(io.BytesIO(parts["project.zip"])).testzip() is not None:
         raise ValueError("project.zip in the backup is damaged")
@@ -357,7 +378,7 @@ def restore(folder: str = "") -> None:
     compose_bytes(*db, "dropdb", "-U", user, "--force", name)  # a fresh database: no table from later code stays behind
     compose_bytes(*db, "createdb", "-U", user, name)
     compose_bytes(*db, "pg_restore", "-U", user, "--no-owner", "--exit-on-error", "-d", name, data=parts["shell.dump"])
-    compose_bytes("exec", "-T", "mongo", "mongorestore", "--archive", "--gzip", "--drop", data=parts["tilbot.archive"])
+    compose_bytes(*mongo("mongorestore --archive --gzip --drop"), data=parts["tilbot.archive"])
     compose_bytes(
         "exec", "-T", "tilbot-backend", "sh", "-c", "rm -rf projects/* proj_pub/* && tar -xzf -",
         data=parts["tilbot-files.tar.gz"],

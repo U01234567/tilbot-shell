@@ -48,10 +48,10 @@ Every command runs from the repository root. `start_shell.py` picks the right co
 | A certificate warning on https://localhost | `python start_shell.py trust`, then close **every** browser window, private ones too, and reopen |
 | A browser error inside the chat frame | The same, or open https://bot.localhost once and accept the warning |
 | "No Tilbot project is linked yet" | Follow [your study, start to finish](#your-study-start-to-finish) |
-| "… is empty in .env, but the database was made with the old value" | Put the value back from your backup (see [Keys](#keys)) |
+| "… is empty in .env, but a database already exists" | Put the value back from your backup (see [Keys](#keys)). Coming from version 1.x, where the value didn't exist yet: see [Updates](#updates) |
 | `researcher` says Tilbot refused its admin password | Someone changed it in Tilbot's dashboard. Put the same value in `.env` as `TILBOT_ADMIN_PASSWORD` and run `up`, or reset the admin (next row) |
 | The system page says "Docker can't be read" | `python start_shell.py ps`: is `docker-proxy` running? On Linux with rootless Docker or Podman the socket isn't at `/var/run/docker.sock`; change the line in `compose.yaml` |
-| Tilbot's admin password is lost | Delete only the admin account; projects belong to Tilbot accounts and stay. `python start_shell.py exec mongo mongosh tilbot --eval "db.users.deleteOne({role: 99})"`. The next visit to the login page makes `admin` again, with the password from `.env` |
+| Tilbot's admin password is lost | Delete only the admin account; projects belong to Tilbot accounts and stay. `python start_shell.py exec mongo sh`, and in that shell: `mongosh tilbot -u tilbot -p "$MONGO_TILBOT_PASSWORD" --authenticationDatabase admin --eval "db.users.deleteOne({role: 99})"`, then `exit`. `python start_shell.py restart tilbot-backend` makes `admin` again, with the password from `.env` |
 
 ## Running a study
 
@@ -100,7 +100,7 @@ Good to know:
 - **The editor has no "Load project" button in the browser.** Use Import in the dashboard.
 - **Only the Tilbot project in `project.toml` reaches participants.** Another running project gets nobody through the shell, and can't save anything for anyone. The bin icon hides a project in Tilbot's dashboard; never hide the one in `project.toml`.
 - **Transcripts** are stored by the shell, encrypted, when `project/project.toml` has `transcripts.enabled = true` (the default). Tilbot's own logging is off and its switch hidden; nothing is ever written in plain text.
-- **Tilbot's `admin` account** only exists to make Tilbot accounts, and `start_shell.py researcher` uses it for you; its password is `TILBOT_ADMIN_PASSWORD` in `.env`. Don't change that password in Tilbot's dashboard, or the command can no longer make accounts.
+- **Tilbot's `admin` account** only exists to make Tilbot accounts, and `start_shell.py researcher` uses it for you; Tilbot makes it at its first start, with `TILBOT_ADMIN_PASSWORD` from `.env` as its password. Don't change that password in Tilbot's dashboard, or the command can no longer make accounts.
 - **Someone who should only build the flowchart,** a student assistant for example: log in to Tilbot's dashboard as `admin` and make their Tilbot account there by hand. They then can't see the participants' data.
 
 ## Changing a running study
@@ -156,7 +156,7 @@ Not described yet. `compose.yaml` is written for it (`SHELL_ENV=production`, a r
 - **Keep two copies outside this computer,** for example in two password managers held by two people.
 - **Never change the key** once real data is stored. Changing it needs a re-encryption step that doesn't exist yet.
 - **Every backup is encrypted with this key,** so restoring one needs the key that was in use when it was made.
-- **New secrets:** empty their values in `.env` and run `up`, which fills them in again. It refuses to replace `FIELD_ENCRYPTION_KEY` or `POSTGRES_PASSWORD` while a database exists, because the new value would lock out what is stored.
+- **New secrets:** empty their values in `.env` and run `up`, which fills them in again. It refuses to replace `FIELD_ENCRYPTION_KEY`, `POSTGRES_PASSWORD`, `MONGO_ROOT_PASSWORD` or `MONGO_TILBOT_PASSWORD` while a database exists, because the new value would lock out what is stored.
 - **Start over with all-new secrets,** for a test setup only, because it deletes every stored answer, account and Tilbot project:
   ```
   python start_shell.py down -v
@@ -204,5 +204,9 @@ python start_shell.py update
 ```
 
 Run it while the system runs: it first makes a backup, which reads from the running services, then rebuilds everything and, in development, runs the tests. If you had stopped it, `python start_shell.py start` starts it again as it was, without rebuilding. If something fails, it stops and says which backup takes you back: return to the code you had (`git log` shows it), then `restore` that backup. If a Tilbot patch no longer applies, the build stops; regenerate the patch against the new commit.
+
+**Going back after an update by accident.** Every `up` (so also `update` and `restore`) adds a line to `versions.log`: the date, the commit of this repository, and the pinned Tilbot and vector-similarity-intent commits. git skips the file. To go back to the code of an earlier line: `git checkout <its tilbot-shell commit>`, then `python start_shell.py update`; if the newer code had already changed the database, `restore` the backup that `update` made before it.
+
+**From version 1.x to 2.0.** Version 2.0 runs Tilbot 2.1, which logs in to its database; a 1.x database has no login, so 2.0 starts clean. For a study without data to keep: on 1.x, `python start_shell.py down -v` (it deletes every answer, account and Tilbot project, and keeps the trusted certificate); then `git pull`; then `python start_shell.py up`, which adds the new secrets to `.env`; then `python start_shell.py researcher`, import the flowchart, and put its new id in `project.toml`. A flowchart exported from Tilbot 2.0 loses its Processing blocks' parameters in 2.1 (`item = Q01` arrives empty): type each value in again in the editor, or import a flowchart saved by 2.1.
 
 Python packages take patch updates only: run `python start_shell.py lock` and rebuild. A minor or major upgrade (Django 5.2 to 6.x, say) is a decision: write it in `docs/decisions.md` first.

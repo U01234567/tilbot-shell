@@ -1,0 +1,22 @@
+diff --git a/frontend/src/routes/editor/block_popups/components/variablepopup.svelte b/frontend/src/routes/editor/block_popups/components/variablepopup.svelte
+index 4014520..0fbe76d 100644
+--- a/frontend/src/routes/editor/block_popups/components/variablepopup.svelte
++++ b/frontend/src/routes/editor/block_popups/components/variablepopup.svelte
+@@ -151,7 +151,7 @@
+           onclick={() => {
+             let filter = {};
+ 
+-            if (filterSelect !== undefined && filterSelect.value == "filter") {
++            if (filterSelect != null && filterSelect.value == "filter") { // null once Svelte removed the field
+               filter.colName = filterColnameSelect.value;
+               if (filterTypeSelect.value == "text") {
+                 filter.match = {
+@@ -169,7 +169,7 @@
+             onSave(
+               variables[variableSelect.selectedIndex - 1].type,
+               variableSelect.value,
+-              colSelect !== undefined ? colSelect.value : "",
++              colSelect != null ? colSelect.value : "",
+               variableElementSelected == "Random row",
+               filter
+             );

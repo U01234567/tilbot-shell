@@ -140,7 +140,7 @@ A participant signs up with age and gender, and gets a random 4-character code. 
 
 ## vector-similarity-intent for phase 3
 
-Questions in phase 3 are matched to the knowledge base by meaning, in two steps: first the topic, then the question. The answer always comes from the knowledge base itself. The model runs on our own server.
+Questions in phase 3 are matched to the knowledge base by meaning, in one step over every question and phrasing (see Phase 3 below). The answer always comes from the knowledge base itself. The model runs on our own server.
 
 - **A large language model.** It is more flexible, but it writes its own answers, which can be wrong, and usually sends the participant's question to an outside service.
 - **Keyword matching.** It is simple, but fails as soon as a participant uses other words.
@@ -156,7 +156,7 @@ Whether chat messages are stored is `transcripts.enabled` in `project.toml`, on 
 
 ## No default admin password
 
-Tilbot's dashboard account `admin` gets its first password from `.env` (patch 0006), filled in by `up` like the other secrets. Without that setting Tilbot refuses to create the account.
+Tilbot's dashboard account `admin` gets its first password from `TILBOT_ADMIN_PASSWORD` in `.env`, filled in by `up` like the other secrets. Since version 2.1 Tilbot itself refuses to start without one (it reads it from a file, which `compose.yaml` makes from `.env`); before, our patch 0006 did this.
 
 - **Keep Tilbot's `admin`/`admin` and tell people to change it.** Documented advice is forgotten; a known default on a research server is a security hole.
 - **Fall back to `admin` when the setting is missing.** Easier to merge upstream, but a silent default is exactly what we wanted gone.
@@ -193,7 +193,7 @@ Phase 2 shows each scale of `project/feedback.toml` (a score from 0 to 100), onc
 
 ## Phase 3: answers from the study's own knowledge base
 
-Participants' questions are matched to `project/knowledge.xlsx`, one question per row with example phrasings, and answered word for word from it. The shell asks vector-similarity-intent which question or phrasing is closest in meaning, in one step over all of them; a wrong match or no match says so instead of guessing. Every question asked is kept with the entry it matched (the text only when the study keeps transcripts), so a study can evaluate the matching. Links in answers are clickable through a small Tilbot patch.
+Participants' questions are matched to `project/knowledge.xlsx`, one question per row with example phrasings, and answered word for word from it. The shell asks vector-similarity-intent which question or phrasing is closest in meaning, in one step over all of them; a wrong match or no match says so instead of guessing. Every question asked is kept with the entry it matched (the text only when the study keeps transcripts), so a study can evaluate the matching. Tilbot shows links in answers as links: since version 2.1 it shows messages as Markdown, without HTML (patch 0013).
 
 - **The knowledge base as CSV or TOML.** No extra library, but Dutch Excel breaks CSV (semicolons, accents), and 100 long answers are awkward in TOML. Excel is what researchers edit; reading it costs one small, pure-Python library (openpyxl).
 - **Two steps, topic first, then the question.** Helps when many questions look alike across topics, but a wrong topic in the first step makes the second fail. The topic stays in the file; two steps can follow once a real knowledge base shows the need.
@@ -251,16 +251,16 @@ The researcher dashboard draws every component and who calls whom, green, orange
 - **A command only** (`start_shell.py status`). Simplest, but not the visual overview that was asked for, and not for researchers without a terminal.
 - **Hiding participants' text on the page with patterns.** Fragile: a missed pattern shows it anyway. Tilbot stops writing it instead (patch 0010), which also keeps it out of the logs on disk.
 
-## Known gaps in version 1.1
+## Known gaps in version 2.0
 
 - **Not built yet:** updates as planned (the new version switched on only after its tests pass, the old one kept to go back to, and a notice in the dashboard when an update exists); the test that runs Tilbot's own engine against the shell, in the repository; backups on a schedule; running on a server; energy use; and several versions of a chatbot side by side (participants divided over Tilbot projects).
 - **A participant can't do the questionnaire again** once every item is answered.
-- **Tilbot's two servers have no health check.** Their API has no call without side effects to check with; the shell, both databases and the matching service do have one.
 - **Matching is tested with a stand-in, not the real model.** The language model is too large for the automated tests; check the matching on the real knowledge base before a study starts, and add phrasings where it misses.
 - **The answer to a question can't use the participant's own data** ("your pain score is …") yet.
 - **Transcripts are best-effort.** If the shell is down, Tilbot logs an error and that line is lost. Answers are not lost: they are asked again.
 - **The `transcripts.enabled` setting is read by the shell only.** Tilbot still sends every event; the shell discards them. That costs nothing but is worth knowing.
 - **Questionnaire answers are numbers or fixed words** (`labels` in `questionnaire.toml`); free text is only for questions (phase 3).
 - **The results' scores are mean-based (0–100).** Questionnaires scored by a plain sum would need a second method in `phase2_feedback/scoring.py`.
-- **The patches were made against the code of 12 October 2026.** If they don't apply to a newer pinned commit, regenerate them.
+- **The patches were made against Tilbot 2.1 (25 November 2026).** If they don't apply to a newer pinned commit, regenerate them.
+- **Version 2.0 can't open a Tilbot database made by 1.x:** Tilbot 2.1 logs in to its database, and a 1.x database has no login. Moving from 1.x means starting clean (operations.md, Updates).
 - **Tilbot's dashboard is only reachable in development.** `compose.yaml` doesn't publish port 8081, so on a server researchers have no way in yet (an SSH tunnel is the likely answer).

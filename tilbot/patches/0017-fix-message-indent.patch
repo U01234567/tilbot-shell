@@ -1,0 +1,26 @@
+diff --git a/frontend/src/lib/components/ChatMessage.svelte b/frontend/src/lib/components/ChatMessage.svelte
+index 7ee53af..42b0684 100644
+--- a/frontend/src/lib/components/ChatMessage.svelte
++++ b/frontend/src/lib/components/ChatMessage.svelte
+@@ -104,7 +104,7 @@
+         </div>
+       </div>
+     {:else}
+-      <div class="w-2"></div>
++      <div class={settings.show_avatar_sm ? "w-10" : "w-2"}></div>
+     {/if}
+     <div class="chat-bubble whitespace-pre-line text-white {background}">
+       <div class="flex items-start">
+diff --git a/frontend/src/lib/components/ChatMessageList.svelte b/frontend/src/lib/components/ChatMessageList.svelte
+index 7cf92c5..53f6876 100644
+--- a/frontend/src/lib/components/ChatMessageList.svelte
++++ b/frontend/src/lib/components/ChatMessageList.svelte
+@@ -42,7 +42,7 @@
+         </div>
+       </div>
+     {:else}
+-      <div class="w-2"></div>
++      <div class={settings.show_avatar_sm ? "w-10" : "w-2"}></div>
+     {/if}
+     <div class="chat-bubble bg-tilbot-secondary-purple">
+       <span class="loading loading-dots loading-sm text-white"></span>

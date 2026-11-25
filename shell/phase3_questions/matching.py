@@ -28,5 +28,5 @@ def by_phrasing(knowledge: tuple[Entry, ...]) -> dict[str, Entry]:
 
 
 def answer_text(entry: Entry) -> str:
-    """What the participant reads: the answer, and the link on its own line (patch 0007 makes it clickable)."""
+    """What the participant reads: the answer, and the link on its own line (Tilbot shows it as a link)."""
     return f"{entry.answer}\n{entry.link}" if entry.link else entry.answer

@@ -1,0 +1,14 @@
+diff --git a/common/projectcontroller/local.ts b/common/projectcontroller/local.ts
+index e0aeb32..c6294e0 100644
+--- a/common/projectcontroller/local.ts
++++ b/common/projectcontroller/local.ts
+@@ -652,7 +652,8 @@ export class LocalProjectController<
+         }
+ 
+         if (res !== null) {
+-          txt += res.join(", ");
++          // A random row arrives as named fields, a column as a list: join the values either way.
++          txt += (Array.isArray(res) ? res : Object.values(res)).join(", ");
+         }
+       } else if (
+         c.variableType !== undefined &&

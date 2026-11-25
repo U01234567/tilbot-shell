@@ -33,3 +33,9 @@ RUN for patch in /patches/*.patch; do [ -e "$patch" ] || continue; git apply "$p
 # The install command from Tilbot's own compose file, then the production build of the chat.
 RUN yarn install --immutable \
     && yarn workspace frontend build
+
+# Both servers run as the unprivileged user "node", as in Tilbot's own Dockerfile. It owns only the two
+# folders the backend writes to; fresh volumes mounted there take over that owner.
+RUN mkdir -p backend/projects backend/proj_pub \
+    && chown node:node backend/projects backend/proj_pub
+USER node

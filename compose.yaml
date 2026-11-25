@@ -83,34 +83,53 @@ services:
     <<: *tilbot
     working_dir: /tilbot/frontend
     command: ["node", "build"]
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/healthcheck').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+      interval: 30s
+      retries: 3
 
   tilbot-backend:
     <<: *tilbot
     working_dir: /tilbot/backend
-    command: ["yarn", "tsx", "server.ts"]
+    command: ["node", "--import", "tsx", "server.ts"]   # as in Tilbot's own Dockerfile
     environment:
       LISTEN_PORT: "8000"
-      MONGO_DB: mongodb://mongo/tilbot
+      db_tilbot_user: tilbot                         # Tilbot's login to its database, under the names it reads
+      db_tilbot_password: ${MONGO_TILBOT_PASSWORD}
       SESSION_SECRET: ${TILBOT_SESSION_SECRET}
       COOKIE_SECRET: ${TILBOT_SESSION_SECRET}
-      ADMIN_PASSWORD: ${TILBOT_ADMIN_PASSWORD}       # patch 0006: no admin/admin default
+      ADMIN_PASSWORD_FILE: /run/secrets/tilbot_admin_password   # read once, when Tilbot first makes its admin
       SHELL_URL: http://shell:8000/bridge/   # keep the trailing slash: patches 0001 and 0002 add "save" and "log" to it
       BRIDGE_SECRET: ${BRIDGE_SECRET}
+    secrets: [tilbot_admin_password]
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8000/api/healthcheck').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+      interval: 30s
+      retries: 3
+      start_period: 1m
     volumes:
       - tilbot-projects:/tilbot/backend/projects
       - tilbot-public:/tilbot/backend/proj_pub
-    depends_on: [mongo]
+    depends_on:
+      mongo: { condition: service_healthy }
 
   mongo:
     logging: *logging
     image: mongo:8.3   # the version in Tilbot's own compose file
     healthcheck:
       test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
-      interval: 30s
-      retries: 3
+      interval: 10s
+      retries: 10
     restart: unless-stopped
+    environment:
+      # Logins are made once, when the volume is still empty: root, then Tilbot's own (tilbot/mongo-init.js).
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+      MONGO_TILBOT_USER: tilbot
+      MONGO_TILBOT_PASSWORD: ${MONGO_TILBOT_PASSWORD}
     volumes:
       - mongo:/data/db
+      - ./tilbot/mongo-init.js:/docker-entrypoint-initdb.d/tilbot.js:ro
 
   # The researchers' system page (shell/monitor/system.py) reads Docker through this proxy, never directly:
   # Docker's own socket can do anything to the computer. The proxy passes on only reading the list of
@@ -157,6 +176,11 @@ services:
       start_period: 15m   # the first start downloads the language model
     volumes:
       - models:/root/.cache/huggingface   # the model downloads once, then works offline
+
+# Tilbot reads its first admin password from a file; Docker makes that file from .env.
+secrets:
+  tilbot_admin_password:
+    environment: TILBOT_ADMIN_PASSWORD
 
 volumes:
   static:

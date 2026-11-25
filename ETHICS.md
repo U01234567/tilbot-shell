@@ -47,7 +47,9 @@ Caddy, the web server, keeps no access log. The containers' own output (`docker 
 development, the addresses the shell was asked for (never a form's content), the knowledge base phrasings the intent service
 compared, and error messages; an error can quote a participant's raw answer when the shell refuses it (an
 answer off the scale). Tilbot itself printed every message a participant typed; patch 0010 stops that
-(below). Those logs live on the machine, are capped at 3 files of 10 MB per service (older lines go first),
+(below). Tilbot 2.1 logs the address of every request it gets; for the chat that address holds the
+participant token (`pid=…`, see below), which is encrypted, names no code and no answer, and expires after 12
+hours. Those logs live on the machine, are capped at 3 files of 10 MB per service (older lines go first),
 and are not kept after the containers are removed.
 
 ## The system page
@@ -91,7 +93,7 @@ a researcher's laptop, which must have full-disk encryption.
 | Volume | Holds | Participant data? |
 |---|---|---|
 | `db` | the Postgres database: everything in the tables above | yes, encrypted where the tables say so |
-| `mongo` | Tilbot's researcher logins (hashed passwords), project definitions, dashboard settings | no; Tilbot's own conversation logging is off |
+| `mongo` | Tilbot's researcher logins (hashed passwords), project definitions, dashboard settings; the database needs a login (`MONGO_TILBOT_PASSWORD`) | no; Tilbot's own conversation logging is off |
 | `tilbot-projects`, `tilbot-public` | the flowcharts' data tables and avatars (uploaded by researchers; an SVG avatar is served as is) | no |
 | `static`, `caddy-data`, `tilbot-shell-caddy-ca` | the shell's CSS, Caddy's certificates | no |
 | `models` | the language model for phase 3, downloaded once, only for a study with `knowledge.xlsx` | no |
@@ -122,10 +124,12 @@ taken word for word from `knowledge.xlsx`: nothing is generated.
 
 ## Our changes to Tilbot
 
-Tilbot runs with twelve small patches, listed in `docs/architecture.md`. Three of them matter here: one
+Tilbot runs with fifteen small patches, listed in `docs/architecture.md`. Three of them matter here: one
 makes Tilbot send conversation events to the shell instead of its own database (so nothing is stored
 in plain text), one passes the participant token above along with each call to the shell, and one
 (0010) stops Tilbot from printing participants' messages in its log.
+
+Tilbot 2.1 can send the recent chat history along with a call to an external service (a setting per external link, off unless switched on). The shell's own links don't use it. Switched on for a link to an outside service, that service receives the conversation: a study decision, to record in `project/README.md`.
 
 ## Keys and access
 

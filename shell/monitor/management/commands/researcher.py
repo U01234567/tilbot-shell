@@ -30,7 +30,6 @@ def tilbot_call(opener, path: str, form: dict | None = None) -> str:
 def make_tilbot_account(name: str, password: str) -> str:
     """Return Tilbot's answer: "OK", "USER_EXISTS", or another code when it refused."""
     opener = build_opener(HTTPCookieProcessor(CookieJar()))  # keeps the admin's session cookie
-    tilbot_call(opener, "admin_account_exists")  # creates Tilbot's admin on first use, as its login page does
     admin = {"username": "admin", "password": os.environ["TILBOT_ADMIN_PASSWORD"]}
     if tilbot_call(opener, "login", admin) != "OK":
         raise CommandError(
