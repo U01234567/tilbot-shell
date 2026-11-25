@@ -24,7 +24,8 @@ How the parts fit together, where everything lives, and the contract between the
    docker-proxy: lets the shell's system page read Docker (containers, resource use, logs), nothing else
 ```
 
-- **The shell is the hub.** Tilbot only calls the shell, and only the shell calls the vector-similarity-intent service.
+- **The shell is the hub.** Tilbot only calls the shell, and only the shell calls the vector-similarity-intent service. The one exception is a study's own services.
+- **A study can add its own services** (a language model, local or by API key, or anything else) in `project/compose.yaml`, which `start_shell.py` adds to `compose.yaml` when it exists; `project-example/compose.yaml` shows the options, switched off. They join the same Docker network, and a flowchart calls them as an external link, for example `http://ollama:8085/`. Tilbot gives them neither the participant's token nor the bridge secret (patch 0001). The system page doesn't draw them.
 - **Participants see two sites.** The shell at `SHELL_HOST` handles sign-up, sign-in and the chat page. Tilbot at `BOT_HOST` is only ever shown inside the shell's chat page, in an iframe.
 - **The system page shows all of this live.** `/researcher/system` draws these parts and who calls whom, each green, orange or red by its health check, with its CPU, memory and latest log lines (`shell/monitor/system.py`). The shell reads Docker only through `docker-proxy`, which passes on just those three readings (ETHICS.md, "The system page").
 - **Tilbot's researcher dashboard is not public.** It sits on port 8081, which only `compose.dev.yaml` publishes, and only to `127.0.0.1`.

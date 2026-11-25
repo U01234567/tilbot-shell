@@ -1,0 +1,31 @@
+# The study's own services, beside the shell's. start_shell.py adds this file to compose.yaml when it exists,
+# so its services join the same Docker network, and a flowchart calls one as an external link (Tilbot's
+# dashboard, the project's settings), for example http://ollama:8085/ . Run python start_shell.py up after a
+# change here. What a service logs and where it sends data is the study's to decide (ETHICS.md,
+# project/README.md). Settings for one machine, such as a graphics card, go in your study's copy of this file.
+#
+# The options below are Tilbot's own modules, built from GitHub at a fixed commit, and switched off. To switch
+# one on, replace "services: {}" with "services:", and take away the "# " in front of the option's lines.
+# Intent recognition needs nothing here: it runs when project/knowledge.xlsx exists.
+services: {}
+
+# A local language model: it runs on this machine, and nothing leaves it. The first start downloads the model.
+#   ollama:
+#     build:
+#       context: https://github.com/tilbotio/ollama-module.git#0ad7268147e44a8da1107b49521b56374318a4b4
+#       args: {PORT: 8085}
+#     environment: {MODEL: "gemma3:1b", PORT: 8085}   # any model Ollama knows
+#     volumes: ["ollama:/root/.ollama"]               # keeps the model between starts (see the end)
+#     restart: unless-stopped
+
+# A language model by API key: what Tilbot sends it goes to OpenAI. Put OPENAI_API_KEY and OPENAI_MODEL in .env.
+#   chatgpt:
+#     build:
+#       context: https://github.com/tilbotio/chatgpt-module.git#0d6b82e5e9c38ec41e480ef8d7bd6eaf5a382134
+#       args: {PORT: 8086}
+#     environment: {OPENAI_API_KEY: "${OPENAI_API_KEY}", OPENAI_MODEL: "${OPENAI_MODEL}", PORT: 8086}
+#     restart: unless-stopped
+
+# With the local model, also:
+# volumes:
+#   ollama:

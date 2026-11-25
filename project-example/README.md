@@ -14,6 +14,7 @@ Participant data is never in this folder: it stays in the database.
 | `feedback.toml` | the results (phase 2): how they are shown (beside the chat, in the chat, or both), scales, thresholds, texts and the story's sentences; leave it out for no results | the results change |
 | `tilbot/<name>.tilbot` | the flowchart, exported from Tilbot's dashboard as a backup; `example.tilbot` is a working example to import | the conversation changes |
 | `knowledge.xlsx` | the questions participants may ask, with example phrasings, answers and optional links (phase 3); `knowledge-example.xlsx` shows the format: rename a copy to switch phase 3 on | the knowledge base changes |
+| `compose.yaml` | optional: services of the study's own, such as a language model; the options are in it, switched off | the study adds a service |
 | this file | the study's own decisions (below) | one of them is taken |
 
 Restart the shell after a change: `python start_shell.py restart shell`. What each change does to a study that is already running: [docs/operations.md](../docs/operations.md#changing-a-running-study). After adding or removing `knowledge.xlsx`: `python start_shell.py up`, which starts or leaves out the matching service.
@@ -32,4 +33,5 @@ applications need them; `ETHICS.md` in the repository only describes the softwar
 - **Retention:** how long answers, transcripts and the sign-in attempt log are kept, and how they are deleted after the study.
 - **Removal requests:** whether participants can ask for their data to be removed, given that only their code identifies them.
 - **Access:** who has access to the server, the encryption key, the backups and the researcher dashboard.
+- **Own services** (`compose.yaml`): which ones, what they log, whether participants see generated text, and, for a model by API key, that the conversation leaves the machine.
 - **Exports:** who may export the data, with or without codes, and where the exported files are kept.

@@ -251,7 +251,14 @@ The researcher dashboard draws every component and who calls whom, green, orange
 - **A command only** (`start_shell.py status`). Simplest, but not the visual overview that was asked for, and not for researchers without a terminal.
 - **Hiding participants' text on the page with patterns.** Fragile: a missed pattern shows it anyway. Tilbot stops writing it instead (patch 0010), which also keeps it out of the logs on disk.
 
-## Known gaps in version 2.0
+## A study's own services in its project folder
+
+A study that wants more than the shell offers, such as a language model on the same machine or one reached by API key, adds it in `project/compose.yaml`. `start_shell.py` adds that file to `compose.yaml` when it exists, and a flowchart calls the service as one of Tilbot's external links. The repository fixes no model, graphics card or other machine-specific setting; `project-example/compose.yaml` shows Tilbot's own modules as options, switched off.
+
+- **Each option built into `compose.yaml`, chosen in `project.toml`.** Every new option would be repository code, and graphics card and model settings would end up in the repository.
+- **The shell writing the prompt for one built-in model.** One option only, and shell code for each new one.
+
+## Known gaps in version 2.1
 
 - **Not built yet:** updates as planned (the new version switched on only after its tests pass, the old one kept to go back to, and a notice in the dashboard when an update exists); the test that runs Tilbot's own engine against the shell, in the repository; backups on a schedule; running on a server; energy use; and several versions of a chatbot side by side (participants divided over Tilbot projects).
 - **A participant can't do the questionnaire again** once every item is answered.
@@ -263,4 +270,5 @@ The researcher dashboard draws every component and who calls whom, green, orange
 - **The results' scores are mean-based (0–100).** Questionnaires scored by a plain sum would need a second method in `phase2_feedback/scoring.py`.
 - **The patches were made against Tilbot 2.1 (25 November 2026).** If they don't apply to a newer pinned commit, regenerate them.
 - **Version 2.0 can't open a Tilbot database made by 1.x:** Tilbot 2.1 logs in to its database, and a 1.x database has no login. Moving from 1.x means starting clean (operations.md, Updates).
+- **A study's own services aren't on the system page,** and the shell doesn't check them: `python start_shell.py ps` and `logs` do.
 - **Tilbot's dashboard is only reachable in development.** `compose.yaml` doesn't publish port 8081, so on a server researchers have no way in yet (an SSH tunnel is the likely answer).

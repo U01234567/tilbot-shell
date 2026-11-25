@@ -44,6 +44,8 @@ DATABASE_VOLUME = "tilbot-shell_db"  # the "db" volume of compose project "tilbo
 CA_VOLUME = "tilbot-shell-caddy-ca"  # external in compose.yaml, so `down -v` keeps it
 # A study with a knowledge base answers questions (phase 3): only then does vector-similarity-intent run.
 KNOWLEDGE = ROOT / "project" / "knowledge.xlsx"
+# A study's own services (a language model, …), added to compose.yaml when the file exists.
+PROJECT_COMPOSE = ROOT / "project" / "compose.yaml"
 # Backups: one folder each, every file encrypted with FIELD_ENCRYPTION_KEY (shell's backup_cipher).
 BACKUPS = ROOT / "backups"  # the default place, kept out of git; copy backups elsewhere too
 VERSIONS_LOG = ROOT / "versions.log"  # one line per `up`: the commits that ran, to go back to; kept out of git
@@ -93,6 +95,8 @@ def compose_files(env: str) -> list[str]:
     files = ["-f", "compose.yaml"]
     if env == "development":
         files += ["-f", "compose.dev.yaml"]
+    if PROJECT_COMPOSE.exists():
+        files += ["-f", "project/compose.yaml"]
     return files
 
 

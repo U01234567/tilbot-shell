@@ -113,7 +113,7 @@ taken word for word from `knowledge.xlsx`: nothing is generated.
   every file encrypted with `FIELD_ENCRYPTION_KEY`; they can't be read without that key, which is never in a
   backup. They are written to `backups/` on the same machine unless the team names another place; copies
   elsewhere, and how long they are kept, are the study's decision (`project/README.md`).
-- **No other participant data**, except exports made by the team. An export (researcher dashboard)
+- **No other participant data**, except exports made by the team, and what a study's own services send (below). An export (researcher dashboard)
   contains answers, scale scores, when and how the results were shown, questions and transcripts decrypted, with either the participants' codes or numbers instead;
   the page explains the difference. Where exports are kept is the study's decision (`project/README.md`).
 - At build time the machine downloads code and images: Tilbot and vector-similarity-intent from
@@ -121,6 +121,10 @@ taken word for word from `knowledge.xlsx`: nothing is generated.
   for phase 3 the language model from Hugging Face. `python start_shell.py updates` asks GitHub for the
   newest commit. On a real domain, Caddy asks Let's Encrypt for certificates. None of these requests
   carry anything about participants.
+
+## A study's own services
+
+A study can run services of its own beside the shell, in `project/compose.yaml`, such as a language model. The shell doesn't see what passes between Tilbot and such a service, and can't vouch for what it logs or sends on: Tilbot's own modules print the messages they get to their log. Tilbot gives them neither the participant's token nor the bridge secret (patch 0001), but does send what the participant typed and, where the link's chat history is on, the conversation. A model by API key sends this to its provider, off the machine; a local model keeps it on the machine. What a study's services keep, log and send, and whether the participant sees generated text, is the study's to decide and write in `project/README.md`.
 
 ## Our changes to Tilbot
 
