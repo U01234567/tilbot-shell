@@ -258,10 +258,37 @@ A study that wants more than the shell offers, such as a language model on the s
 - **Each option built into `compose.yaml`, chosen in `project.toml`.** Every new option would be repository code, and graphics card and model settings would end up in the repository.
 - **The shell writing the prompt for one built-in model.** One option only, and shell code for each new one.
 
-## Known gaps in version 2.1
+## Sign-in by the ID in the link, for a study run from another app
+
+A study whose participants come from an app such as m-Path signs them in by the ID that app puts in the link: no code to remember, no form, and the app already knows who they are. The ID is the only key: whoever has someone's link can answer as them, which each study weighs in its `project/README.md`.
+
+- **The ID plus a code typed once.** A login after all.
+- **A signature in the link.** Can't be forged, but the other app would have to sign its links.
+
+## Every visit a new round, for experience sampling
+
+With `repeat`, every sign-in starts a new round of the same questions, and an unfinished round stays unfinished: experience sampling asks about the moment, and one round mixing two moments would blur it.
+
+- **Continuing an unfinished round at the next visit.** Fewer unfinished rounds, but a round could span two moments.
+
+## Conditions assigned once, kept equal
+
+A new participant gets the condition with the fewest participants, at random among equals, and keeps it. With few participants a coin flip can leave the groups far apart.
+
+- **A coin flip every time.** Simplest, but 10 participants can split 7 to 3.
+- **Strict turns.** Equal, and fully predictable.
+
+## A story by a language model, prompted by the shell
+
+The shell writes the prompt and asks the model, because only the shell knows the condition, the round and the earlier answers. The prompt, with its guardrails, is the study's, in `narrative.toml`; the shell adds a time limit, a word limit and a fallback, and stores every story. One way of asking (OpenAI's chat API, which Ollama offers too) serves a local model and one by API key. For Ollama, the model's name stands in one place, and `up` removes every other model.
+
+- **Tilbot calling the model as an external link.** No shell code, but the model wouldn't get earlier rounds.
+- **The whole story told again each round.** No earlier story needed, but less of one story.
+
+## Known gaps in version 2.2
 
 - **Not built yet:** updates as planned (the new version switched on only after its tests pass, the old one kept to go back to, and a notice in the dashboard when an update exists); the test that runs Tilbot's own engine against the shell, in the repository; backups on a schedule; running on a server; energy use; and several versions of a chatbot side by side (participants divided over Tilbot projects).
-- **A participant can't do the questionnaire again** once every item is answered.
+- **A participant can't do the questionnaire again** once every item is answered, unless the study repeats it every visit (`repeat`).
 - **Matching is tested with a stand-in, not the real model.** The language model is too large for the automated tests; check the matching on the real knowledge base before a study starts, and add phrasings where it misses.
 - **The answer to a question can't use the participant's own data** ("your pain score is …") yet.
 - **Transcripts are best-effort.** If the shell is down, Tilbot logs an error and that line is lost. Answers are not lost: they are asked again.
@@ -270,5 +297,7 @@ A study that wants more than the shell offers, such as a language model on the s
 - **The results' scores are mean-based (0–100).** Questionnaires scored by a plain sum would need a second method in `phase2_feedback/scoring.py`.
 - **The patches were made against Tilbot 2.1 (25 November 2026).** If they don't apply to a newer pinned commit, regenerate them.
 - **Version 2.0 can't open a Tilbot database made by 1.x:** Tilbot 2.1 logs in to its database, and a 1.x database has no login. Moving from 1.x means starting clean (operations.md, Updates).
+- **A generated story can still say something unwanted,** guardrails or not. Every story is stored so the team can read what participants saw.
+- **Ollama runs on the processor unless a study's `compose.yaml` gives it a graphics card;** a small model then takes seconds to a minute per story.
 - **A study's own services aren't on the system page,** and the shell doesn't check them: `python start_shell.py ps` and `logs` do.
 - **Tilbot's dashboard is only reachable in development.** `compose.yaml` doesn't publish port 8081, so on a server researchers have no way in yet (an SSH tunnel is the likely answer).

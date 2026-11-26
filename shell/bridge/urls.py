@@ -9,4 +9,5 @@ urlpatterns = [
     path("bridge/ask", views.ask),
     path("bridge/status", views.status),
     path("bridge/feedback", views.feedback),
+    path("bridge/narrative", views.narrative),
 ]

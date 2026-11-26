@@ -10,11 +10,13 @@ from django.utils.crypto import constant_time_compare
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
+from accounts.models import Participant
 from accounts.session import signed_in_id
 from config.project import NO_TILBOT_PROJECT
 from bridge.tokens import make_token, read_token
-from records.models import Answer, FeedbackShown, Question, TranscriptLine, latest_answers
+from records.models import Answer, FeedbackShown, Narrative, Question, TranscriptLine, latest_answers
 from phase1_collect.rules import parse_answer, questionnaire_done, route_after
+from phase2_feedback import narrative as narratives
 from phase2_feedback.story import chart, story
 from phase3_questions import matching
 
@@ -70,12 +72,12 @@ def save(request):
     if not has_secret(request):
         return HttpResponseForbidden()
     try:
-        participant_id = read_token(request.POST["participant_id"])
+        participant = Participant.objects.get(pk=read_token(request.POST["participant_id"]))
         item = settings.STUDY.items[request.POST["item"]]
         value = parse_answer(item, request.POST["user_input"])
-    except (KeyError, ValueError, signing.BadSignature) as error:
+    except (KeyError, ValueError, signing.BadSignature, Participant.DoesNotExist) as error:
         return HttpResponseBadRequest(repr(error))
-    Answer.objects.create(participant_id=participant_id, item=item.id, value=value)
+    Answer.objects.create(participant=participant, item=item.id, value=value, round=participant.round)
     return JsonResponse({"intent": route_after(item, value)})
 
 
@@ -140,6 +142,29 @@ def feedback(request):
     if part == "chart":
         return JsonResponse({"intent": show, "connector_label": chart(study.feedback, study.items, answers)})
     return HttpResponseBadRequest(f"part must be story or chart, not {part!r}")
+
+
+@csrf_exempt  # called by Tilbot's server, not a browser; BRIDGE_SECRET and the token protect it
+@require_POST
+def narrative(request):
+    """After a round: the story a language model wrote from it (narrative.toml), as the connector "chat" with the
+    story as its label. Asked again for the same round, the same story comes back. Any error returns 4xx."""
+    study = settings.STUDY
+    if not has_secret(request):
+        return HttpResponseForbidden()
+    if study.narrative is None:
+        return HttpResponseNotFound("this study has no project/narrative.toml")
+    try:
+        participant = Participant.objects.get(pk=read_token(request.POST["participant_id"]))
+    except (KeyError, signing.BadSignature, Participant.DoesNotExist) as error:
+        return HttpResponseBadRequest(repr(error))
+    answers = latest_answers(participant.pk)
+    if not questionnaire_done(study.items, answers):
+        return HttpResponseBadRequest("not every item of this round is answered yet")
+    told = Narrative.objects.filter(participant=participant, round=participant.round).first()
+    if told is None:
+        told = narratives.tell(participant, answers)
+    return JsonResponse({"intent": CHAT, "connector_label": told.text})
 
 
 def has_secret(request) -> bool:

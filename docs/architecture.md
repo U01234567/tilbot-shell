@@ -25,7 +25,7 @@ How the parts fit together, where everything lives, and the contract between the
 ```
 
 - **The shell is the hub.** Tilbot only calls the shell, and only the shell calls the vector-similarity-intent service. The one exception is a study's own services.
-- **A study can add its own services** (a language model, local or by API key, or anything else) in `project/compose.yaml`, which `start_shell.py` adds to `compose.yaml` when it exists; `project-example/compose.yaml` shows the options, switched off. They join the same Docker network, and a flowchart calls them as an external link, for example `http://ollama:8085/`. Tilbot gives them neither the participant's token nor the bridge secret (patch 0001). The system page doesn't draw them.
+- **A study can add its own services** (a language model, local or by API key, or anything else) in `project/compose.yaml`, which `start_shell.py` adds to `compose.yaml` when it exists; `project-example/compose.yaml` shows the options, switched off. They join the same Docker network, and a flowchart calls them as an external link, for example `http://ollama-module:8085/`, or the shell does (Phase 2 with a language model, below). Tilbot gives them neither the participant's token nor the bridge secret (patch 0001). The system page doesn't draw them.
 - **Participants see two sites.** The shell at `SHELL_HOST` handles sign-up, sign-in and the chat page. Tilbot at `BOT_HOST` is only ever shown inside the shell's chat page, in an iframe.
 - **The system page shows all of this live.** `/researcher/system` draws these parts and who calls whom, each green, orange or red by its health check, with its CPU, memory and latest log lines (`shell/monitor/system.py`). The shell reads Docker only through `docker-proxy`, which passes on just those three readings (ETHICS.md, "The system page").
 - **Tilbot's researcher dashboard is not public.** It sits on port 8081, which only `compose.dev.yaml` publishes, and only to `127.0.0.1`.
@@ -120,6 +120,8 @@ The shell stores these lines only when `project.toml` has `transcripts.enabled =
 
 With `part=story` the shell notes that the results were shown, and how, and replies `{"intent": "panel"}`, or `{"intent": "chat", "connector_label": "<the story>"}`. With `part=chart` it replies `{"intent": "chat"}` or `{"intent": "both"}`, with the chart as the label. A participant who hasn't answered every item yet gets a 4xx reply.
 
+**`POST /bridge/narrative`**: the story a language model wrote from this round (`narrative.toml`, below). No fields beyond the two above. The shell replies `{"intent": "chat", "connector_label": "<the story>"}`; asked again in the same round, the same story. A round that isn't finished gets a 4xx reply.
+
 ## Phase 1 in Tilbot's editor
 
 Open the editor from Tilbot's dashboard, with the pencil icon next to the project.
@@ -180,6 +182,20 @@ A study with `project/feedback.toml` shows the participant's results once, at th
 The chat page checks that a message comes from Tilbot's own frame. `show_results` loads `/results` from the shell; `done` tells the page that the questionnaire is over, so leaving it needs no warning.
 
 **What passes through Tilbot:** with `panel`, nothing: the message carries no data, and `/results` answers only a signed-in participant, with their own answers. With `chat` and `both`, the story and the chart go from the shell through Tilbot's server to the chat, like the answers of phase 3, and are kept in the transcript, encrypted, when the study keeps transcripts. The shell notes each time the results are shown, and how; the export has it as `feedback.csv`.
+
+## Sign-in by link, rounds and conditions
+
+- **Sign-in by the ID in the link** (`[signup] by_link = true` in `project.toml`): an app such as m-Path opens `https://SHELL_HOST/?id=<its participant ID>`. A new ID becomes a participant at once, a known one is signed in; there is no code, no form, no age or gender, and the sign-up and sign-in pages are closed. An ID is letters, digits, `-` and `_`, at most 64. New IDs count as sign-ups in the limit per IP address.
+- **Rounds** (`repeat = true` in `questionnaire.toml`): every sign-in starts the next round, and the questionnaire starts again. Each answer is stored with its round; the status at the start of a chat, and everything computed from answers, looks only at the current round. A round left halfway stays unfinished. Without `repeat`, every answer is in round 1, as before.
+- **Conditions** (`[[conditions]]` in `narrative.toml`): a new participant gets the condition with the fewest participants, drawn at random when several have as few, and keeps it.
+
+## Phase 2 with a language model
+
+A study with `project/narrative.toml` (`project-example/narrative-example.toml` explains each line) gets a story after every round, written by a language model, instead of `feedback.toml`'s story. The shell fills the study's prompt with the main character's name, this round's answers in the words of their buttons, and, for a condition with `memory = "all"`, the stories so far, and asks the model through the OpenAI-style chat API that Ollama and OpenAI both offer (`phase2_feedback/narrative.py`). A `cycle` condition names the main character after the round (round 1 the first name, and after the last name the first again); a `fixed` one draws a name at sign-up. The model gets `seconds` and `max_words`; when it fails, the participant reads the `fallback`. Every story is stored, encrypted, with its round and whether the model wrote it; the export has them as `narratives.csv`.
+
+With `server = "ollama"`, Ollama runs in `project/compose.yaml` (`ollama/ollama`, its first option), and `python start_shell.py up` runs `python manage.py model`: it fetches `narrative.toml`'s model and deletes every other model in Ollama's volume. A model lives in that volume, not in an image. With `server = "openai"`, the shell sends `MODEL_API_KEY` from `.env`.
+
+**In the flowchart,** after the last question: a Processing block "narrative" with an external link `shell-narrative` (`http://shell:8000/bridge/narrative`) and no parameters. Its connectors: `chat` → an Auto block whose content is the previous connector's label (the story); *else* → a block "I can't tell your story right now". Then the end. At the start, `shell-status` says `new` for a round without answers, so each visit asks the questions again.
 
 ## Phase 3: questions
 

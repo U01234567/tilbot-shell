@@ -46,6 +46,8 @@ CA_VOLUME = "tilbot-shell-caddy-ca"  # external in compose.yaml, so `down -v` ke
 KNOWLEDGE = ROOT / "project" / "knowledge.xlsx"
 # A study's own services (a language model, …), added to compose.yaml when the file exists.
 PROJECT_COMPOSE = ROOT / "project" / "compose.yaml"
+# A story by a language model after each round: up has the shell prepare its model (manage.py model).
+NARRATIVE = ROOT / "project" / "narrative.toml"
 # Backups: one folder each, every file encrypted with FIELD_ENCRYPTION_KEY (shell's backup_cipher).
 BACKUPS = ROOT / "backups"  # the default place, kept out of git; copy backups elsewhere too
 VERSIONS_LOG = ROOT / "versions.log"  # one line per `up`: the commits that ran, to go back to; kept out of git
@@ -214,6 +216,8 @@ def up() -> list[str]:
     ).split()
     for service in stopped:
         print(f"Not running: {service}. See why with: python start_shell.py logs {service}")
+    if NARRATIVE.exists() and "shell" not in stopped:
+        compose("exec", "-T", "shell", "python", "manage.py", "model")
     if not stopped:
         print("Everything is running. Open https://localhost (if the browser warns: python start_shell.py trust).")
     return stopped

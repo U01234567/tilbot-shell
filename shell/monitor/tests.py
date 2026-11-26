@@ -53,13 +53,13 @@ def test_overview_counts(client, researcher, data):
 def test_export_without_codes_numbers_participants_by_sign_up(client, researcher, data):
     response = client.post("/researcher/export", {"codes": "without"})
     assert csv_rows(response, "participants.csv")[1][0] == "1"
-    assert csv_rows(response, "answers.csv")[1][:3] == ["2", "Q01", "7"]
+    assert csv_rows(response, "answers.csv")[1][:4] == ["2", "1", "Q01", "7"]
     assert "AAAA" not in str(csv_rows(response, "participants.csv"))
 
 
 def test_export_with_codes_carries_the_code(client, researcher, data):
     response = client.post("/researcher/export", {"codes": "with"})
-    assert csv_rows(response, "answers.csv")[2][:3] == ["AAAA", "Q01", "3"]
+    assert csv_rows(response, "answers.csv")[2][:4] == ["AAAA", "1", "Q01", "3"]
 
 
 def test_export_times_are_in_the_study_time_zone(client, researcher, data, settings):

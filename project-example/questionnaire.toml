@@ -1,4 +1,5 @@
 # Phase 1. Tilbot asks the questions (its editor); this file holds what the shell decides.
+# repeat = true   # the same questions at every sign-in, each time a new round (experience sampling); leave out: once
 # Each Processing block "save" in Tilbot sends item = <id>. Every id used there must exist here.
 #
 # scale      the lowest and highest answer allowed; anything else makes Tilbot ask again

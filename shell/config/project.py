@@ -5,6 +5,7 @@ the participant sees (so each study picks its own language), and the Tilbot proj
 questionnaire.toml holds, per item, the answer scale, the answer words, the threshold for follow-ups
 and the question text for the results.
 feedback.toml, if the study has one, holds the scales and texts of the participant's results (phase 2).
+narrative.toml, if the study has one, holds the story a language model writes after each round (phase 2).
 knowledge.xlsx, if the study has one, holds the questions and answers of phase 3.
 A mistake in any of them stops the shell with an error that names the problem.
 """
@@ -57,6 +58,30 @@ class Feedback:
 
 
 @dataclass(frozen=True)
+class Condition:
+    """One way of telling the story (narrative.toml): what it is based on, and how its main character is named."""
+
+    id: str
+    memory: str  # MEMORY: this round's answers only, or the story so far as well
+    name: str  # NAMING: the next name of the list each round, or one name drawn once
+
+
+@dataclass(frozen=True)
+class Narrative:
+    """The story after each round, written by a language model (phase2_feedback/narrative.py)."""
+
+    server: str  # SERVERS: Ollama (its models are fetched and removed by the shell) or any OpenAI-style API
+    url: str
+    model: str
+    prompt: str  # with the blanks of PROMPT_BLANKS
+    names: tuple[str, ...]
+    fallback: str  # what the participant reads when the model fails
+    conditions: tuple[Condition, ...]
+    seconds: int = 60  # how long the model may take
+    max_words: int = 200  # a longer story is cut off here
+
+
+@dataclass(frozen=True)
 class Entry:
     """One question of the knowledge base, with the answer the participant gets for it (phase 3)."""
 
@@ -76,6 +101,8 @@ TEXT_KEYS = (
     "already_have_id", "no_id_yet", "wrong_id", "id_taken", "blocked_title", "blocked_text", "back",
     "sign_out_check", "stay",
 )
+# Instead, with sign-in by the ID in the link ([signup] by_link): what a participant sees.
+LINK_TEXT_KEYS = ("open_from_link", "blocked_title", "blocked_text", "back", "sign_out", "sign_out_check", "stay")
 # Every text of the results panel. feedback.toml must define each one under [texts].
 FEEDBACK_TEXT_KEYS = ("results", "intro", "worth_discussing", "fine", "none", "back")
 HIGHER = ("better", "worse")
@@ -83,6 +110,10 @@ SHOW = ("panel", "chat", "both")
 STORY_KEYS = ("opening", "closing")  # feedback.toml's [story], needed when show is "chat" or "both"
 # A scale's sentence in the chat, per state: within its threshold, past it, or a scale without a threshold.
 STATES = ("fine", "worth", "neutral")
+SERVERS = ("ollama", "openai")
+MEMORY = ("round", "all")
+NAMING = ("cycle", "fixed")
+PROMPT_BLANKS = {"name", "answers", "story_so_far"}
 # The columns of knowledge.xlsx, in its first row. topic, phrasings and link may stay empty.
 KNOWLEDGE_COLUMNS = ("id", "topic", "question", "phrasings", "answer", "link")
 
@@ -94,12 +125,15 @@ class Study:
     time_zone: str  # times are shown in this zone, for example "Europe/Amsterdam"
     transcripts: bool  # store the chat messages (encrypted), or only the answers
     tilbot_project_id: str
-    age_min: int
-    age_max: int
+    age_min: int | None  # None with sign-in by link: no sign-up form
+    age_max: int | None
     genders: tuple[str, ...]
     texts: dict[str, str]
     items: dict[str, Item]
+    by_link: bool = False  # sign in by the ID in the link (?id=...), without a code or a form
+    repeat: bool = False  # the same questions at every sign-in, as a new round (experience sampling)
     feedback: Feedback | None = None  # None: the study shows no results
+    narrative: Narrative | None = None  # None: no story by a language model
     knowledge: tuple[Entry, ...] | None = None  # None: the study answers no questions
     logo: bool = False  # project/theme/logo.png exists: the participant pages show it
 
@@ -112,7 +146,8 @@ def load_study(project_dir: Path) -> Study:
     if len(set(ids)) != len(ids):
         raise ValueError(f"questionnaire.toml: an item id is used twice in {ids}")
     signup = settings["signup"]
-    missing = [key for key in TEXT_KEYS if key not in settings["texts"]]
+    by_link = signup.get("by_link", False)
+    missing = [key for key in (LINK_TEXT_KEYS if by_link else TEXT_KEYS) if key not in settings["texts"]]
     if missing:
         raise ValueError(f"project.toml: [texts] lacks {', '.join(missing)}")
     return Study(
@@ -121,12 +156,15 @@ def load_study(project_dir: Path) -> Study:
         time_zone=str(zoneinfo.ZoneInfo(settings["time_zone"])),  # an unknown zone fails here, at start-up
         transcripts=settings["transcripts"]["enabled"],
         tilbot_project_id=settings["tilbot"]["project_id"],
-        age_min=signup["age_min"],
-        age_max=signup["age_max"],
-        genders=tuple(signup["genders"]),
+        age_min=signup.get("age_min"),
+        age_max=signup.get("age_max"),
+        genders=tuple(signup.get("genders", ())),
         texts=settings["texts"],
         items={item.id: item for item in items},
+        by_link=by_link,
+        repeat=questionnaire.get("repeat", False),
         feedback=load_feedback(project_dir / "feedback.toml", ids),
+        narrative=load_narrative(project_dir / "narrative.toml"),
         knowledge=load_knowledge(project_dir / "knowledge.xlsx"),
         logo=(project_dir / "theme" / "logo.png").exists(),
     )
@@ -165,6 +203,28 @@ def load_feedback(path: Path, item_ids: list[str]) -> Feedback | None:
     if show != "panel":
         check_story(story, scales)
     return Feedback(texts=feedback["texts"], scales=scales, show=show, story=story)
+
+
+def load_narrative(path: Path) -> Narrative | None:
+    """Read narrative.toml; a study without the file has no story by a language model."""
+    if not path.exists():
+        return None
+    raw = tomllib.loads(path.read_text(encoding="utf-8"))
+    conditions = tuple(Condition(id=c["id"], memory=c["memory"], name=c["name"]) for c in raw["conditions"])
+    if raw["server"] not in SERVERS:
+        raise ValueError(f'narrative.toml: server must be one of {", ".join(SERVERS)}, not "{raw["server"]}"')
+    if not raw["names"] or not conditions:
+        raise ValueError("narrative.toml: needs at least one name and one [[conditions]]")
+    for c in conditions:
+        if c.memory not in MEMORY or c.name not in NAMING:
+            raise ValueError(f"narrative.toml: condition {c.id} needs memory = {' or '.join(MEMORY)} and name = {' or '.join(NAMING)}")
+    unknown = {name for _, name, _, _ in string.Formatter().parse(raw["prompt"]) if name} - PROMPT_BLANKS
+    if unknown:
+        raise ValueError(f"narrative.toml: the prompt has a blank it can't fill: {sorted(unknown)}; it knows {sorted(PROMPT_BLANKS)}")
+    return Narrative(
+        server=raw["server"], url=raw["url"], model=raw["model"], prompt=raw["prompt"], names=tuple(raw["names"]),
+        fallback=raw["fallback"], conditions=conditions, seconds=raw.get("seconds", 60), max_words=raw.get("max_words", 200),
+    )
 
 
 def check_story(story: dict[str, str], scales: tuple[Scale, ...]) -> None:

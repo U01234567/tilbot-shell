@@ -10,7 +10,7 @@ from django.utils.timezone import localtime
 
 from accounts.models import Participant
 from phase2_feedback.scoring import scale_score, worth_discussing
-from records.models import Answer, FeedbackShown, Question, TranscriptLine, latest_answers
+from records.models import Answer, FeedbackShown, Narrative, Question, TranscriptLine, latest_answers
 
 
 def participant_label(participant, with_codes: bool, numbers: dict[int, int]) -> str:
@@ -23,16 +23,16 @@ def numbering() -> dict[int, int]:
 
 
 def participant_rows(with_codes: bool, numbers: dict[int, int]) -> list[list]:
-    rows = [["participant", "age", "gender", "signed_up"]]
+    rows = [["participant", "age", "gender", "signed_up", "rounds", "condition", "character"]]
     for p in Participant.objects.order_by("created", "pk"):
-        rows.append([participant_label(p, with_codes, numbers), p.age, p.gender, localtime(p.created).isoformat()])
+        rows.append([participant_label(p, with_codes, numbers), p.age, p.gender, localtime(p.created).isoformat(), p.round, p.condition, p.character])
     return rows
 
 
 def answer_rows(with_codes: bool, numbers: dict[int, int]) -> list[list]:
-    rows = [["participant", "item", "value", "at"]]
+    rows = [["participant", "round", "item", "value", "at"]]
     for a in Answer.objects.select_related("participant").order_by("at", "pk"):
-        rows.append([participant_label(a.participant, with_codes, numbers), a.item, a.value, localtime(a.at).isoformat()])
+        rows.append([participant_label(a.participant, with_codes, numbers), a.round, a.item, a.value, localtime(a.at).isoformat()])
     return rows
 
 
@@ -73,11 +73,20 @@ def feedback_rows(with_codes: bool, numbers: dict[int, int]) -> list[list]:
     return rows
 
 
+def narrative_rows(with_codes: bool, numbers: dict[int, int]) -> list[list]:
+    """Phase 2 with narrative.toml: the story each participant got after each round; generated False: the fallback."""
+    rows = [["participant", "round", "character", "generated", "text", "at"]]
+    for n in Narrative.objects.select_related("participant").order_by("at", "pk"):
+        rows.append([participant_label(n.participant, with_codes, numbers), n.round, n.character, n.generated, n.text, localtime(n.at).isoformat()])
+    return rows
+
+
 FILES = {
     "participants": participant_rows,
     "answers": answer_rows,
     "scores": score_rows,
     "feedback": feedback_rows,
+    "narratives": narrative_rows,
     "questions": question_rows,
     "transcripts": transcript_rows,
 }

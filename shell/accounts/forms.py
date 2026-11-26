@@ -11,12 +11,12 @@ STUDY = settings.STUDY  # read once at import; a test that overrides settings.ST
 class SignUpForm(forms.Form):
     """Age and gender, limited by project/project.toml."""
 
-    age = forms.IntegerField(label=STUDY.texts["age"], min_value=STUDY.age_min, max_value=STUDY.age_max)
-    gender = forms.ChoiceField(label=STUDY.texts["gender"], choices=[(gender, gender) for gender in STUDY.genders])
+    age = forms.IntegerField(label=STUDY.texts.get("age"), min_value=STUDY.age_min, max_value=STUDY.age_max)
+    gender = forms.ChoiceField(label=STUDY.texts.get("gender"), choices=[(gender, gender) for gender in STUDY.genders])
 
 
 class SignInForm(forms.Form):
-    code = forms.CharField(label=STUDY.texts["your_id"], min_length=LENGTH, max_length=LENGTH)
+    code = forms.CharField(label=STUDY.texts.get("your_id"), min_length=LENGTH, max_length=LENGTH)
 
     def clean_code(self) -> str:
         return normalize(self.cleaned_data["code"])

@@ -8,8 +8,9 @@ from django.db import connection
 from accounts.models import Participant
 from accounts.session import SESSION_KEY
 from bridge.tokens import fernet, make_token, read_token
-from config.project import Item, Study
-from records.models import Answer, TranscriptLine
+from config.project import Condition, Item, Narrative, Study
+from phase2_feedback import narrative as narratives
+from records.models import Answer, Narrative as Told, TranscriptLine
 
 SECRET = "test-secret"
 STUDY = Study(
@@ -147,3 +148,78 @@ def test_chat_shows_tilbots_header(client, participant, settings):
     session[SESSION_KEY] = participant.pk
     session.save()
     assert "show_header" not in client.get("/chat").content.decode()
+
+
+def test_each_answer_belongs_to_the_participants_round(client, participant):
+    post_answer(client, participant, "3")
+    participant.round = 2
+    participant.save()
+    assert post_status(client, participant).json() == {"intent": "new"}  # round 2 has no answers yet
+    post_answer(client, participant, "4")
+    assert list(Answer.objects.order_by("pk").values_list("round", flat=True)) == [1, 2]
+    assert post_status(client, participant).json() == {"intent": "returning"}
+
+
+NARRATIVE = Narrative(
+    server="ollama", url="http://ollama:11434", model="m", prompt="{name}|{answers}|{story_so_far}",
+    names=("Jef", "Sara", "Noah"), fallback="Thank you.",
+    conditions=(Condition(id="per_round", memory="round", name="cycle"), Condition(id="ongoing", memory="all", name="fixed")),
+)
+
+
+@pytest.fixture
+def model(settings, monkeypatch):
+    """The language model, replaced: it answers with the prompt it got, so a test can read the prompt."""
+    settings.STUDY = dataclasses.replace(STUDY, narrative=NARRATIVE)
+    monkeypatch.setattr(narratives, "ask", lambda narrative, prompt: f"Story: {prompt}")
+
+
+def post_narrative(client, participant):
+    return client.post("/bridge/narrative", {"participant_id": make_token(participant.pk), "bridge_secret": SECRET})
+
+
+def finish_round(client, participant, number, answer="3"):
+    participant.round = number
+    participant.save()
+    post_answer(client, participant, answer)
+    return post_narrative(client, participant).json()["connector_label"]
+
+
+def test_narrative_waits_for_the_whole_round(client, participant, model):
+    assert post_narrative(client, participant).status_code == 400
+
+
+def test_per_round_condition_takes_the_next_name_and_only_this_round(client, participant, model):
+    participant.condition = "per_round"
+    first = finish_round(client, participant, 1)
+    second = finish_round(client, participant, 2, answer="4")
+    assert first.startswith("Story: Jef|") and second.startswith("Story: Sara|")
+    assert "- Q01: 4|(none yet)" in second
+    assert finish_round(client, participant, 4).startswith("Story: Jef|")  # three names: round 4 starts over
+
+
+def test_ongoing_condition_keeps_its_name_and_continues_the_story(client, participant, model):
+    participant.condition, participant.character = "ongoing", "Noah"
+    first = finish_round(client, participant, 1)
+    second = finish_round(client, participant, 2, answer="4")
+    assert second.startswith("Story: Noah|- Q01: 4|") and second.endswith(first)
+
+
+def test_the_same_round_gets_the_same_story(client, participant, model):
+    participant.condition = "per_round"
+    first = finish_round(client, participant, 1)
+    assert post_narrative(client, participant).json()["connector_label"] == first
+    assert Told.objects.count() == 1
+
+
+def test_a_failing_model_gives_the_fallback_and_says_so(client, participant, model, monkeypatch):
+    def fails(narrative, prompt):
+        raise OSError("timed out")
+    monkeypatch.setattr(narratives, "ask", fails)
+    participant.condition = "per_round"
+    assert finish_round(client, participant, 1) == "Thank you."
+    assert Told.objects.get().generated is False
+
+
+def test_a_long_story_is_cut_off():
+    assert narratives.cut("one two three four", 2) == "one two …"

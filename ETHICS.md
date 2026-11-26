@@ -9,11 +9,12 @@ Check this file against the code before every submission.
 
 | What | Where | Protected by |
 |---|---|---|
-| A random 4-character code, age, gender, date of sign-up | Postgres, table `accounts_participant` | access to the server |
-| Every questionnaire answer: item id, value, time | Postgres, table `records_answer` | the value is encrypted (Fernet: AES-128 with HMAC-SHA256) |
+| A random 4-character code, age, gender, date of sign-up; or, with sign-in by link, the ID in the link and no age or gender. Also the current round, and, with `narrative.toml`, the condition and the story's main character | Postgres, table `accounts_participant` | access to the server |
+| Every questionnaire answer: item id, value, round, time | Postgres, table `records_answer` | the value is encrypted (Fernet: AES-128 with HMAC-SHA256) |
 | Every chat message, from the participant and the bot, with its time; only if `project.toml` says `transcripts.enabled = true` | Postgres, table `records_transcriptline` | the text is encrypted, as above |
 | Every question typed in phase 3, with the knowledge base entry it matched and its time; the text only if `transcripts.enabled = true` | Postgres, table `records_question` | the text is encrypted, as above |
 | When the results were shown, and how (panel, chat or both) | Postgres, table `records_feedbackshown` | access to the server; it holds no answers |
+| With `narrative.toml`: the story each round, written by a language model from the answers, with the main character's name and whether the model wrote it | Postgres, table `records_narrative` | the text is encrypted, as above |
 | Which participant a browser is signed in as, and the code shown on the sign-up page | Postgres, table `django_session` | expires after 12 hours, and is deleted at the next start of the shell or backup |
 
 ## Researcher accounts
@@ -24,11 +25,13 @@ account with the same name and password (MongoDB, hashed). Both dashboards are o
 computer that runs the shell.
 
 No names, email addresses, phone numbers or other contact details are asked for or stored.
-The code is the only link between a person and their data. Whoever holds a code can sign in with it.
+The code is the only link between a person and their data. Whoever holds a code can sign in with it. With
+sign-in by link, the ID in the link plays that part: whoever has someone's link can answer as them, and the other
+app (m-Path, for example) knows who the ID belongs to.
 
 ## Removing data
 
-A researcher can remove one participant, with all their answers, questions, transcript lines, the notes of
+A researcher can remove one participant, with all their answers, questions, transcript lines, stories, the notes of
 when their results were shown, and their sign-in sessions, from the researcher dashboard ("Remove a participant", by their code), and every
 participant at once at the end of a study (`python start_shell.py erase`). Neither happens automatically.
 Backups made before keep the removed data until they are deleted themselves.
@@ -121,6 +124,15 @@ taken word for word from `knowledge.xlsx`: nothing is generated.
   for phase 3 the language model from Hugging Face. `python start_shell.py updates` asks GitHub for the
   newest commit. On a real domain, Caddy asks Let's Encrypt for certificates. None of these requests
   carry anything about participants.
+
+## A story by a language model
+
+With `narrative.toml`, the shell sends this round's answers (in the words of their buttons), the main character's
+name and, in a condition that continues the story, the earlier stories, to the language model the file names. With
+Ollama in the study's `compose.yaml`, this stays on the machine. With a model by API key, it goes to that provider.
+The model's output is shown to the participant as it is, within the study's prompt and the shell's word limit;
+whether a generated text is acceptable for the study's participants is the study's to decide, in
+`project/README.md`.
 
 ## A study's own services
 

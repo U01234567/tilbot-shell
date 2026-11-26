@@ -2,7 +2,7 @@ import pytest
 from django.conf import settings
 from django.core.management import call_command
 
-from config.project import FEEDBACK_TEXT_KEYS, load_feedback, load_study, parse_item, parse_scale
+from config.project import FEEDBACK_TEXT_KEYS, load_feedback, load_narrative, load_study, parse_item, parse_scale
 
 
 @pytest.mark.django_db  # makemigrations checks the migration history in the database
@@ -77,3 +77,29 @@ def test_a_story_in_the_chat_is_checked_at_start_up(tmp_path, text, problem):
 
 def test_the_panel_needs_no_story(tmp_path):
     assert load_feedback(feedback_file(tmp_path, SCALE), ["Q09"]).show == "panel"
+
+
+NARRATIVE_TOML = """
+server = "ollama"
+url = "http://ollama:11434"
+model = "gemma3:1b"
+names = ["Jef"]
+fallback = "Thanks."
+prompt = "A story about {name}: {answers}"
+[[conditions]]
+id = "per_round"
+memory = "round"
+name = "cycle"
+"""
+
+
+def test_narrative_is_read_and_checked(tmp_path):
+    path = tmp_path / "narrative.toml"
+    path.write_text(NARRATIVE_TOML, encoding="utf-8")
+    assert load_narrative(path).conditions[0].name == "cycle"
+    path.write_text(NARRATIVE_TOML.replace("{answers}", "{score}"), encoding="utf-8")
+    with pytest.raises(ValueError, match="score"):
+        load_narrative(path)
+    path.write_text(NARRATIVE_TOML.replace('memory = "round"', 'memory = "week"'), encoding="utf-8")
+    with pytest.raises(ValueError, match="per_round"):
+        load_narrative(path)

@@ -6,6 +6,9 @@ language = "en"            # language of the pages, one Django knows: "en", "nl"
 time_zone = "UTC"          # times are shown in this zone, for example "Europe/Amsterdam"
 
 [signup]
+# by_link = true   # sign in by the ID in the link (https://SHELL_HOST/?id=...), for example from m-Path: no code,
+                   # no form, no age or gender. [texts] then needs only: open_from_link, blocked_title,
+                   # blocked_text, back, sign_out, sign_out_check, stay.
 age_min = 1                 # to confirm with the research team
 age_max = 150
 genders = ["Male", "Female", "Non-binary", "Other", "Prefer not to say"]

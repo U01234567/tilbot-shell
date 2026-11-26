@@ -11,7 +11,7 @@ from django.core.exceptions import ImproperlyConfigured
 
 from config.project import load_study
 
-SHELL_VERSION = "2.1.0"  # shown in the mark at the bottom of the shell's pages
+SHELL_VERSION = "2.2.0"  # shown in the mark at the bottom of the shell's pages
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
@@ -28,6 +28,7 @@ SECRET_KEY = required("DJANGO_SECRET_KEY")
 SHELL_HOST = required("SHELL_HOST")
 BOT_URL = f"https://{required('BOT_HOST')}"
 INTENT_URL = "http://vector-similarity-intent:8081/"  # phase 3, inside the Docker network only
+MODEL_API_KEY = os.environ.get("MODEL_API_KEY", "")  # narrative.toml with a model by API key; empty: none sent
 BRIDGE_SECRET = required("BRIDGE_SECRET")
 FIELD_ENCRYPTION_KEY = required("FIELD_ENCRYPTION_KEY")
 

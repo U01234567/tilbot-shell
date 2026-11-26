@@ -1,0 +1,54 @@
+# Phase 2 with a language model: after every round of questions, a short story written from the answers.
+# Rename a copy to narrative.toml to switch it on, add a model in compose.yaml, and run python start_shell.py up.
+# The flowchart asks for the story with the block "narrative" (docs/architecture.md). A study uses this file or
+# feedback.toml's story, not both.
+
+# Where the model is. "ollama": Ollama in compose.yaml (its first option); up fetches the model below and deletes
+# every other one, so changing the model is this one line and an up. "openai": any API in OpenAI's style, with
+# MODEL_API_KEY in .env; then what the participant answered leaves this machine (ETHICS.md).
+server = "ollama"
+url = "http://ollama:11434"
+model = "gemma3:1b"   # small enough for a laptop without a graphics card (about 815 MB)
+seconds = 60          # how long the model may take; after that the participant gets the fallback
+max_words = 200       # a longer story is cut off here
+
+# What the participant reads when the model fails or takes too long.
+fallback = "Sorry, I couldn't write a story this time. Your answers are saved."
+
+# The main character's names. A "cycle" condition takes them in this order, one per round, and starts over after
+# the last; a "fixed" condition draws one at sign-up and keeps it.
+names = ["Jef", "Sara", "Noah", "Emma", "Liam"]
+
+# What the model is told, with its guardrails. Blanks the shell fills in: {name} the main character, {answers}
+# this round's answers as "- question: answer" lines (the questions' text from questionnaire.toml), and
+# {story_so_far} the earlier stories, for a condition with memory = "all" ("(none yet)" otherwise).
+prompt = """
+You write a short story in English, 80 to 120 words, about a fictional person called {name}.
+Base it only on the answers below; don't add events they don't support.
+Rules:
+- Third person. Call {name} by name or "they". Never address the reader as "you".
+- Warm and neutral. Never judge, never give advice, never diagnose.
+- Don't mention questionnaires, scores, numbers or the study.
+- No illness, medication, alcohol, drugs, self-harm or crisis, even if the answers hint at it.
+- Write only the story: no title, no notes.
+
+Story so far:
+{story_so_far}
+
+Answers:
+{answers}
+"""
+
+# One [[conditions]] per way of telling the story. A new participant gets the condition with the fewest
+# participants (at random when several have as few) and keeps it. With one condition, everyone gets that one.
+# memory  "round": this round's answers only; "all": the story so far as well, so the story continues
+# name    "cycle": the next name each round; "fixed": one name, drawn once
+[[conditions]]
+id = "per_round"
+memory = "round"
+name = "cycle"
+
+[[conditions]]
+id = "ongoing"
+memory = "all"
+name = "fixed"
