@@ -1,0 +1,12 @@
+diff --git a/common/projectcontroller/local.ts b/common/projectcontroller/local.ts
+index e0aeb32..610f873 100644
+--- a/common/projectcontroller/local.ts
++++ b/common/projectcontroller/local.ts
+@@ -236,6 +236,7 @@ export class LocalProjectController<
+       }
+ 
+       this._output.botMessage({ type, content, params });
++      this._logger.log("message_bot", content);
+       this._addToHistory("assistant", content);
+     } else if (type == "Compute") {
+       this.message_sent_event();

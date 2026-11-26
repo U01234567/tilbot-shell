@@ -93,7 +93,8 @@ def test_export_has_the_scores_of_the_results(client, researcher, data, settings
     assert rows == [["participant", "scale", "score", "worth_discussing"], ["1", "pain", "30.0", "False"], ["2", "pain", "70.0", "True"]]
 
 
-def test_export_has_the_questions_asked(client, researcher, data):
+def test_export_has_the_questions_asked(client, researcher, data, settings):
+    settings.STUDY = dataclasses.replace(settings.STUDY, knowledge=())  # a study with phase 3
     Question.objects.create(participant=Participant.objects.get(code="AAAA"), text="Can I stop?", entry="stop")
     rows = csv_rows(client.post("/researcher/export", {"codes": "with"}), "questions.csv")
     assert rows[0] == ["participant", "question", "entry", "at"]
@@ -215,3 +216,17 @@ def test_system_page_says_when_docker_cant_be_read(client, researcher, monkeypat
     monkeypatch.setattr(system, "read_docker", unreachable)
     page = client.get("/researcher/system").content.decode()
     assert "Docker can't be read: docker-proxy: name not known" in page and '<g class="node unknown">' in page
+
+
+def test_export_has_only_the_files_of_the_parts_the_study_uses(client, researcher, data, settings):
+    settings.STUDY = dataclasses.replace(settings.STUDY, feedback=None, narrative=None, knowledge=None, transcripts=False)
+    response = client.post("/researcher/export", {"codes": "without"})
+    assert sorted(zipfile.ZipFile(io.BytesIO(response.content)).namelist()) == ["answers.csv", "participants.csv"]
+
+
+def test_export_keeps_each_session_together_earliest_first(client, researcher, data):
+    """Two participants answering at the same time: each one's round stays together, the one who began first on top."""
+    first, second = Participant.objects.order_by("created")
+    Answer.objects.create(participant=second, item="Q02", value="5")  # second's round began before first's
+    rows = csv_rows(client.post("/researcher/export", {"codes": "with"}), "answers.csv")
+    assert [row[0] for row in rows[1:]] == ["BBBB", "BBBB", "AAAA"]

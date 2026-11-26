@@ -144,7 +144,7 @@ A study can run services of its own beside the shell, in `project/compose.yaml`,
 
 ## Our changes to Tilbot
 
-Tilbot runs with fifteen small patches, listed in `docs/architecture.md`. Three of them matter here: one
+Tilbot runs with sixteen small patches, listed in `docs/architecture.md`. Three of them matter here: one
 makes Tilbot send conversation events to the shell instead of its own database (so nothing is stored
 in plain text), one passes the participant token above along with each call to the shell, and one
 (0010) stops Tilbot from printing participants' messages in its log.

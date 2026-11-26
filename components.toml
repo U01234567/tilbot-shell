@@ -27,6 +27,7 @@ patches = [
   "0015-fix-random-row-in-message",
   "0016-fix-password-change-reply",
   "0017-fix-message-indent",
+  "0018-fix-log-choice-questions",
 ]
 note = "Tilbot 2.1, the newest commit on 25 Nov 2026. Patches redone against a zip of it. 0006 (admin password) and 0007 (clickable links) are gone: Tilbot 2.1 does both itself."
 

@@ -82,6 +82,7 @@ Each patch is one concern, applied to the pinned commit at build time (`tilbot/p
 | `0014-fix-random-row-variable` | inserting a data table's "Random row" in the editor works; before, Save in that dialog stopped with an error | a bug fix in the editor; nothing about data |
 | `0015-fix-random-row-in-message` | a data table's "Random row" in a message shows the row's values; before, the chat stopped there, in every Tilbot version | a bug fix; nothing about data |
 | `0016-fix-password-change-reply` | changing your password in Tilbot's dashboard says it worked when it did; before, it always said the old password was wrong, even after saving the new one | a bug fix; nothing about data |
+| `0018-fix-log-choice-questions` | a question with answer buttons goes into the transcript too; Tilbot logged every other bot message but not these | a bug fix; nothing about data beyond what transcripts already promise |
 | `0017-fix-message-indent` | with an avatar shown, a bot's second and later messages line up under the first, as in Tilbot 2.0, and so does the typing indicator; before, Tilbot 2.1 started them at the edge | a bug fix; nothing about data |
 
 ## The bridge contract

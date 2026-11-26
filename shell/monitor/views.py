@@ -14,7 +14,7 @@ from django.utils import timezone
 
 from accounts.models import Participant
 from monitor import removal, system
-from monitor.export import FILES, numbering
+from monitor.export import files_of, numbering
 from records.models import Answer, Question, TranscriptLine
 
 
@@ -70,14 +70,14 @@ def traffic() -> dict[str, int]:
 
 @login_required
 def export(request):
-    """A zip of seven CSV files, with the participants' codes or with numbers instead (export.py)."""
+    """A zip of CSV files, those of the parts this study uses, with the participants' codes or with numbers instead (export.py)."""
     if request.method != "POST":
         return render(request, "monitor/export.html")
     with_codes = request.POST.get("codes") == "with"
     numbers = numbering()
     archive = io.BytesIO()
     with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as zipped:
-        for name, rows in FILES.items():
+        for name, rows in files_of(settings.STUDY).items():
             text = io.StringIO()
             csv.writer(text).writerows(rows(with_codes, numbers))
             zipped.writestr(f"{name}.csv", text.getvalue())
