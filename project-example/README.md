@@ -15,6 +15,7 @@ Participant data is never in this folder: it stays in the database.
 | `tilbot/<name>.tilbot` | the flowchart, exported from Tilbot's dashboard as a backup; `example.tilbot` is a working example to import | the conversation changes |
 | `knowledge.xlsx` | the questions participants may ask, with example phrasings, answers and optional links (phase 3); `knowledge-example.xlsx` shows the format: rename a copy to switch phase 3 on | the knowledge base changes |
 | `narrative-example.toml` | the format of `narrative.toml`: a story by a language model after every round, instead of `feedback.toml`'s results; rename a copy to switch it on | the study wants a generated story |
+| `extension/` | optional: code of the study's own, a Django app the shell loads (docs/architecture.md); not in this example | the study needs a page or behaviour the shell doesn't have |
 | `compose.yaml` | optional: services of the study's own, such as a language model; the options are in it, switched off | the study adds a service |
 | this file | the study's own decisions (below) | one of them is taken |
 

@@ -84,23 +84,23 @@ def by_link(settings):
 
 @pytest.mark.django_db
 def test_a_new_id_in_the_link_is_a_new_participant_signed_in(client, by_link):
-    response = client.get("/?id=mpath-123")
+    response = client.get("/?id=app-123")
     assert response.url == "/chat"
-    assert Participant.objects.get().code == "mpath-123"
+    assert Participant.objects.get().code == "app-123"
 
 
 @pytest.mark.django_db
 def test_a_known_id_signs_in_and_starts_a_new_round(client, by_link):
-    client.get("/?id=mpath-123")
-    client.get("/?id=mpath-123")
+    client.get("/?id=app-123")
+    client.get("/?id=app-123")
     assert Participant.objects.get().round == 2
 
 
 @pytest.mark.django_db
 def test_without_repeat_the_round_stays(client, by_link, settings):
     settings.STUDY = dataclasses.replace(settings.STUDY, repeat=False)
-    client.get("/?id=mpath-123")
-    client.get("/?id=mpath-123")
+    client.get("/?id=app-123")
+    client.get("/?id=app-123")
     assert Participant.objects.get().round == 1
 
 

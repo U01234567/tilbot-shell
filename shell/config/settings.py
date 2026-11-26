@@ -5,13 +5,14 @@ A missing value stops the shell at start-up instead of failing halfway through a
 """
 
 import os
+import sys
 from pathlib import Path
 
 from django.core.exceptions import ImproperlyConfigured
 
 from config.project import load_study
 
-SHELL_VERSION = "2.2.0"  # shown in the mark at the bottom of the shell's pages
+SHELL_VERSION = "2.3.0"  # shown in the mark at the bottom of the shell's pages
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
@@ -58,6 +59,13 @@ INSTALLED_APPS = [
     "phase2_feedback",
     # phase1_collect and phase3_questions are plain Python (rules and matching) and need no entry here.
 ]
+
+# A study's own code: project/extension/, a Django app the shell adds when the folder exists, for what one study
+# needs and the shell doesn't do. Its URLs come before the shell's (config/urls.py), so a page of its own can take
+# the place of one of the shell's. It runs inside the shell, with the shell's rights (ETHICS.md).
+if (PROJECT_DIR / "extension" / "__init__.py").exists():
+    sys.path.insert(0, str(PROJECT_DIR))
+    INSTALLED_APPS.append("extension")
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",

@@ -260,7 +260,7 @@ A study that wants more than the shell offers, such as a language model on the s
 
 ## Sign-in by the ID in the link, for a study run from another app
 
-A study whose participants come from an app such as m-Path signs them in by the ID that app puts in the link: no code to remember, no form, and the app already knows who they are. The ID is the only key: whoever has someone's link can answer as them, which each study weighs in its `project/README.md`.
+A study whose participants come from another app signs them in by the ID that app puts in the link: no code to remember, no form, and the app already knows who they are. The ID is the only key: whoever has someone's link can answer as them, which each study weighs in its `project/README.md`.
 
 - **The ID plus a code typed once.** A login after all.
 - **A signature in the link.** Can't be forged, but the other app would have to sign its links.
@@ -285,7 +285,13 @@ The shell writes the prompt and asks the model, because only the shell knows the
 - **Tilbot calling the model as an external link.** No shell code, but the model wouldn't get earlier rounds.
 - **The whole story told again each round.** No earlier story needed, but less of one story.
 
-## Known gaps in version 2.2
+## A study's own code in its project folder
+
+What only one study needs stays out of the repository: such a study adds a Django app in `project/extension/`, which the shell loads when it exists, as `project/compose.yaml` adds services. The repository keeps only the hook.
+
+- **Building it into the shell, behind a setting.** Every study's special case would become everyone's code.
+
+## Known gaps in version 2.3
 
 - **Not built yet:** updates as planned (the new version switched on only after its tests pass, the old one kept to go back to, and a notice in the dashboard when an update exists); the test that runs Tilbot's own engine against the shell, in the repository; backups on a schedule; running on a server; energy use; and several versions of a chatbot side by side (participants divided over Tilbot projects).
 - **A participant can't do the questionnaire again** once every item is answered, unless the study repeats it every visit (`repeat`).

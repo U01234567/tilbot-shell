@@ -122,6 +122,7 @@ The two halves of a study take changes differently. **Tilbot** reads its project
 | Colours, font, logo, the chat's look | `theme/` | after `restart shell`, at the next page load | |
 | The story by a language model: prompt, names, fallback, limits | `narrative.toml` | after `restart shell`, for the next story | a story already told stays as it was |
 | The language model | `model` in `narrative.toml` | after `python start_shell.py up`, which fetches the new one and deletes the old one from Ollama | the first story after a change waits for the download |
+| Code of the study's own | `extension/` | after `restart shell` | runs inside the shell, with its rights: only code the team wrote or checked (ETHICS.md) |
 | A service of the study's own, such as a language model | `compose.yaml` (`project-example/compose.yaml` shows the options) | after `python start_shell.py up` | what it logs and where it sends data is the study's responsibility (ETHICS.md); a flowchart reaches it through an external link |
 
 While the shell restarts (seconds), an answer can't be saved: Tilbot says something went wrong and asks again, so nothing is lost. A mistake in a file of `project/` keeps the shell from starting, with an error that names it: check with `python start_shell.py ps` or the [system page](#the-researcher-dashboard-and-the-data-export) after every restart, and fix it at once, because participants can't sign in meanwhile. Larger changes are safest on a copy first (a second Tilbot project, see "Good to know" above), and with a backup made just before.

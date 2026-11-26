@@ -27,7 +27,7 @@ computer that runs the shell.
 No names, email addresses, phone numbers or other contact details are asked for or stored.
 The code is the only link between a person and their data. Whoever holds a code can sign in with it. With
 sign-in by link, the ID in the link plays that part: whoever has someone's link can answer as them, and the other
-app (m-Path, for example) knows who the ID belongs to.
+app knows who the ID belongs to.
 
 ## Removing data
 
@@ -133,6 +133,10 @@ Ollama in the study's `compose.yaml`, this stays on the machine. With a model by
 The model's output is shown to the participant as it is, within the study's prompt and the shell's word limit;
 whether a generated text is acceptable for the study's participants is the study's to decide, in
 `project/README.md`.
+
+## A study's own code
+
+A study can add code of its own in `project/extension/`, which runs inside the shell with the shell's rights: it can read and change everything the shell stores. It isn't part of this repository and isn't described by this file; what it stores, shows and sends belongs in the study's `project/README.md`.
 
 ## A study's own services
 
