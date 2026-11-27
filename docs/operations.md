@@ -161,6 +161,8 @@ ssh -L 8081:127.0.0.1:8081 you@your-server
 
 Then http://127.0.0.1:8081/researcher/ and http://127.0.0.1:8081/dashboard on your computer are the server's. Don't open port 8081 in the server's firewall: the tunnel is the way in.
 
+The server and your laptop run the same project folder. Two things may differ, and both stay out of the shared files. A graphics card, or anything else only the server has, goes in `project/compose.production.yaml`, which is used only with `SHELL_ENV=production`. A different language model goes in each computer's `.env` as `NARRATIVE_MODEL`, for example a large one on the server and `narrative.toml`'s small one on the laptop. So a fix is made and tested on the laptop, then copied to the server.
+
 ## Keys
 
 `FIELD_ENCRYPTION_KEY` encrypts every answer and transcript line. **Without it the data cannot be read, by anyone.**

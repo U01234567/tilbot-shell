@@ -46,6 +46,7 @@ CA_VOLUME = "tilbot-shell-caddy-ca"  # external in compose.yaml, so `down -v` ke
 KNOWLEDGE = ROOT / "project" / "knowledge.xlsx"
 # A study's own services (a language model, …), added to compose.yaml when the file exists.
 PROJECT_COMPOSE = ROOT / "project" / "compose.yaml"
+PROJECT_PRODUCTION = ROOT / "project" / "compose.production.yaml"  # what only the server needs, such as a graphics card
 # A story by a language model after each round: up has the shell prepare its model (manage.py model).
 NARRATIVE = ROOT / "project" / "narrative.toml"
 # Backups: one folder each, every file encrypted with FIELD_ENCRYPTION_KEY (shell's backup_cipher).
@@ -99,6 +100,8 @@ def compose_files(env: str) -> list[str]:
         files += ["-f", "compose.dev.yaml"]
     if PROJECT_COMPOSE.exists():
         files += ["-f", "project/compose.yaml"]
+    if env == "production" and PROJECT_PRODUCTION.exists():
+        files += ["-f", "project/compose.production.yaml"]
     return files
 
 

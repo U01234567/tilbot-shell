@@ -55,6 +55,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       MODEL_API_KEY: ${MODEL_API_KEY:-}   # only for narrative.toml with a model by API key
+      NARRATIVE_MODEL: ${NARRATIVE_MODEL:-}   # this machine's model instead of narrative.toml's; empty: narrative.toml's
       PROJECT_DIR: /project
     healthcheck:   # `python start_shell.py ps` shows (healthy) or (unhealthy)
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/', timeout=5)"]

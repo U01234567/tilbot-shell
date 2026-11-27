@@ -2,7 +2,7 @@
 # so its services join the shell's and Tilbot's backend's network, and a flowchart calls one as an external link (Tilbot's
 # dashboard, the project's settings), for example http://ollama-module:8085/ . Run python start_shell.py up after a
 # change here. What a service logs and where it sends data is the study's to decide (ETHICS.md,
-# project/README.md). Settings for one machine, such as a graphics card, go in your study's copy of this file.
+# project/README.md). What only the server needs, such as a graphics card, goes in project/compose.production.yaml: start_shell.py adds it only when SHELL_ENV=production, so the same project folder still runs on a laptop.
 #
 # The options below are Tilbot's own modules, built from GitHub at a fixed commit, and switched off. To switch
 # one on, replace "services: {}" with "services:", and take away the "# " in front of the option's lines.

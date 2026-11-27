@@ -8,7 +8,7 @@
 # MODEL_API_KEY in .env; then what the participant answered leaves this machine (ETHICS.md).
 server = "ollama"
 url = "http://ollama:11434"
-model = "gemma3:1b"   # small enough for a laptop without a graphics card (about 815 MB)
+model = "gemma3:1b"   # small enough for a laptop without a graphics card (about 815 MB); NARRATIVE_MODEL in .env overrides it on one computer
 seconds = 60          # how long the model may take; after that the participant gets the fallback
 max_words = 200       # a longer story is cut off here
 

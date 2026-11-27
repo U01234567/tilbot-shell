@@ -311,5 +311,5 @@ What only one study needs stays out of the repository: such a study adds a Djang
 - **The patches were made against Tilbot 2.1 (25 November 2026).** If they don't apply to a newer pinned commit, regenerate them.
 - **Version 2.0 can't open a Tilbot database made by 1.x:** Tilbot 2.1 logs in to its database, and a 1.x database has no login. Moving from 1.x means starting clean (operations.md, Updates).
 - **A generated story can still say something unwanted,** guardrails or not. Every story is stored so the team can read what participants saw.
-- **Ollama runs on the processor unless a study's `compose.yaml` gives it a graphics card;** a small model then takes seconds to a minute per story.
+- **Ollama runs on the processor unless a study's `compose.production.yaml` gives it a graphics card;** a small model then takes seconds to a minute per story.
 - **A study's own services aren't on the system page,** and the shell doesn't check them: `python start_shell.py ps` and `logs` do.

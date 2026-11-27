@@ -103,3 +103,12 @@ def test_narrative_is_read_and_checked(tmp_path):
     path.write_text(NARRATIVE_TOML.replace('memory = "round"', 'memory = "week"'), encoding="utf-8")
     with pytest.raises(ValueError, match="per_round"):
         load_narrative(path)
+
+
+def test_this_machine_can_choose_its_own_model(tmp_path, monkeypatch):
+    path = tmp_path / "narrative.toml"
+    path.write_text(NARRATIVE_TOML, encoding="utf-8")
+    monkeypatch.setenv("NARRATIVE_MODEL", "gemma3:27b")
+    assert load_narrative(path).model == "gemma3:27b"
+    monkeypatch.setenv("NARRATIVE_MODEL", "")
+    assert load_narrative(path).model == "gemma3:1b"

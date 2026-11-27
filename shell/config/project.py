@@ -10,6 +10,7 @@ knowledge.xlsx, if the study has one, holds the questions and answers of phase 3
 A mistake in any of them stops the shell with an error that names the problem.
 """
 
+import os
 import string
 import tomllib
 import zoneinfo
@@ -222,7 +223,7 @@ def load_narrative(path: Path) -> Narrative | None:
     if unknown:
         raise ValueError(f"narrative.toml: the prompt has a blank it can't fill: {sorted(unknown)}; it knows {sorted(PROMPT_BLANKS)}")
     return Narrative(
-        server=raw["server"], url=raw["url"], model=raw["model"], prompt=raw["prompt"], names=tuple(raw["names"]),
+        server=raw["server"], url=raw["url"], model=os.environ.get("NARRATIVE_MODEL") or raw["model"], prompt=raw["prompt"], names=tuple(raw["names"]),
         fallback=raw["fallback"], conditions=conditions, seconds=raw.get("seconds", 60), max_words=raw.get("max_words", 200),
     )
 

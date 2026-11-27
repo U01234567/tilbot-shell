@@ -12,7 +12,7 @@ from django.core.exceptions import ImproperlyConfigured
 
 from config.project import load_study
 
-SHELL_VERSION = "2.5.0"  # shown in the mark at the bottom of the shell's pages
+SHELL_VERSION = "2.6.0"  # shown in the mark at the bottom of the shell's pages
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
