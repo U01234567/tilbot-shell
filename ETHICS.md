@@ -68,7 +68,7 @@ their settings (which hold the passwords and keys), and so control the whole mac
 calls only from the shell, and passes on only three kinds of reading: the list of containers, a container's
 resource use, and a container's log. Everything else is refused, including a container's settings and files.
 It runs without any of the system's special powers (`cap_drop: ALL`), on a read-only file system, and is
-reachable only inside the Docker network. Should the shell be broken into, this limits what Docker reveals to
+reachable only on a network it shares with the shell alone, without internet. Should the shell be broken into, this limits what Docker reveals to
 what the page shows.
 
 ## What the participant's browser is given

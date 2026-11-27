@@ -251,6 +251,13 @@ The researcher dashboard draws every component and who calls whom, green, orange
 - **A command only** (`start_shell.py status`). Simplest, but not the visual overview that was asked for, and not for researchers without a terminal.
 - **Hiding participants' text on the page with patterns.** Fragile: a missed pattern shows it anyway. Tilbot stops writing it instead (patch 0010), which also keeps it out of the logs on disk.
 
+## Networks that follow the arrows
+
+The services share no single network. Each joins only the networks of the services it talks to, which are the arrows on the system page, and the databases and the Docker proxy have no internet. If one service is taken over, it reaches only its neighbours: Caddy and Tilbot's chat pages reach no database, and Mongo, Postgres and the proxy can't send data out. Tilbot's own compose file splits its services the same way. Tilbot's database password reaches it as a secret file, as Tilbot intends, not as an environment variable that `docker inspect` and child processes see.
+
+- **One network for everything.** Simpler, but every service can reach every other one on every port, and every service can reach the internet.
+- **A network per pair.** Stricter, but more lines than our few services need; Tilbot's backend still has to reach a study's own services, because a flowchart calls them.
+
 ## A study's own services in its project folder
 
 A study that wants more than the shell offers, such as a language model on the same machine or one reached by API key, adds it in `project/compose.yaml`. `start_shell.py` adds that file to `compose.yaml` when it exists, and a flowchart calls the service as one of Tilbot's external links. The repository fixes no model, graphics card or other machine-specific setting; `project-example/compose.yaml` shows Tilbot's own modules as options, switched off.
@@ -306,4 +313,3 @@ What only one study needs stays out of the repository: such a study adds a Djang
 - **A generated story can still say something unwanted,** guardrails or not. Every story is stored so the team can read what participants saw.
 - **Ollama runs on the processor unless a study's `compose.yaml` gives it a graphics card;** a small model then takes seconds to a minute per story.
 - **A study's own services aren't on the system page,** and the shell doesn't check them: `python start_shell.py ps` and `logs` do.
-- **Tilbot's dashboard is only reachable in development.** `compose.yaml` doesn't publish port 8081, so on a server researchers have no way in yet (an SSH tunnel is the likely answer).

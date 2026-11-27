@@ -43,7 +43,10 @@
 # Tilbot's chat. Only the shell may show it in a frame, and only what participants need is public.
 {$BOT_HOST} {
 	encode gzip
-	header Content-Security-Policy "frame-ancestors https://{$SHELL_HOST}"
+	header {
+		Content-Security-Policy "frame-ancestors https://{$SHELL_HOST}"
+		Strict-Transport-Security "max-age={$HSTS_MAX_AGE}"
+	}
 
 	# The study's look for the chat: project/theme/, as the shell collected it. Tilbot's pages load
 	# /study-theme/tilbot.css (tilbot/patches/0009); the file may use the fonts and images next to it.
@@ -63,7 +66,7 @@
 }
 
 # The researcher port: the shell's researcher dashboard at /researcher/, and Tilbot's dashboard for the rest.
-# Plain HTTP on port 8081, published to 127.0.0.1 by compose.dev.yaml only.
+# Plain HTTP on port 8081, published to 127.0.0.1 only: on a server, reach it through an SSH tunnel.
 :8081 {
 	handle /researcher/* {
 		reverse_proxy shell:8000

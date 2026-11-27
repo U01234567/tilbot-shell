@@ -12,7 +12,7 @@ from django.core.exceptions import ImproperlyConfigured
 
 from config.project import load_study
 
-SHELL_VERSION = "2.4.1"  # shown in the mark at the bottom of the shell's pages
+SHELL_VERSION = "2.5.0"  # shown in the mark at the bottom of the shell's pages
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
@@ -38,7 +38,7 @@ PROJECT_DIR = Path(required("PROJECT_DIR"))
 STUDY = load_study(PROJECT_DIR)
 
 # "shell" is the name Tilbot uses to reach /bridge/ inside the Docker network.
-# 127.0.0.1:8081 is the researcher port with the researcher dashboard (compose.dev.yaml publishes it on this computer only).
+# 127.0.0.1:8081 is the researcher port with the researcher dashboard (compose.yaml publishes it on this computer only).
 RESEARCHER_ORIGIN = "http://127.0.0.1:8081"
 ALLOWED_HOSTS = [SHELL_HOST, "shell", "127.0.0.1"]
 CSRF_TRUSTED_ORIGINS = [f"https://{SHELL_HOST}", RESEARCHER_ORIGIN]

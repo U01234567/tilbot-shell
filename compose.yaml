@@ -1,7 +1,7 @@
 # Every service as it runs for real.
 # Start with `python start_shell.py up`: it adds compose.dev.yaml when SHELL_ENV=development
 # and passes the pinned commits from components.toml (TILBOT_* and VECTOR_SIMILARITY_INTENT_*).
-# Only Caddy publishes ports; everything else is reachable inside the Docker network only.
+# Only Caddy publishes ports. Each service joins only the networks of the services it talks to (networks, at the end).
 name: tilbot-shell
 
 # Container logs can hold an answer the shell refused, so each service keeps at most 3 files of 10 MB.
@@ -27,6 +27,7 @@ services:
     ports:
       - "80:80"
       - "443:443"
+      - "127.0.0.1:8081:8081"   # the researcher port, on this computer only; from elsewhere through an SSH tunnel
     environment:
       SHELL_HOST: ${SHELL_HOST}
       BOT_HOST: ${BOT_HOST}
@@ -36,6 +37,7 @@ services:
       - static:/srv/static:ro
       - caddy-data:/data
       - caddy-ca:/data/caddy/pki   # the local certificate authority, kept apart (see below)
+    networks: [web]
 
   shell:
     logging: *logging
@@ -62,6 +64,7 @@ services:
     volumes:
       - ./project:/project:ro
       - static:/app/staticfiles
+    networks: [web, default, shell-db, docker]
     depends_on:
       db: { condition: service_healthy }
 
@@ -79,11 +82,13 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - db:/var/lib/postgresql/data
+    networks: [shell-db]
 
   tilbot-frontend:
     <<: *tilbot
     working_dir: /tilbot/frontend
     command: ["node", "build"]
+    networks: [web]
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/healthcheck').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
       interval: 30s
@@ -95,14 +100,13 @@ services:
     command: ["node", "--import", "tsx", "server.ts"]   # as in Tilbot's own Dockerfile
     environment:
       LISTEN_PORT: "8000"
-      db_tilbot_user: tilbot                         # Tilbot's login to its database, under the names it reads
-      db_tilbot_password: ${MONGO_TILBOT_PASSWORD}
+      db_tilbot_user: tilbot   # its database login name; the password comes as a secret file (below)
       SESSION_SECRET: ${TILBOT_SESSION_SECRET}
       COOKIE_SECRET: ${TILBOT_SESSION_SECRET}
       ADMIN_PASSWORD_FILE: /run/secrets/tilbot_admin_password   # read once, when Tilbot first makes its admin
       SHELL_URL: http://shell:8000/bridge/   # keep the trailing slash: patches 0001 and 0002 add "save" and "log" to it
       BRIDGE_SECRET: ${BRIDGE_SECRET}
-    secrets: [tilbot_admin_password]
+    secrets: [tilbot_admin_password, db_tilbot_password]   # files in /run/secrets/, as Tilbot reads them
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8000/api/healthcheck').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
       interval: 30s
@@ -111,6 +115,7 @@ services:
     volumes:
       - tilbot-projects:/tilbot/backend/projects
       - tilbot-public:/tilbot/backend/proj_pub
+    networks: [web, default, tilbot-db]   # default: a flowchart can call a study's own services
     depends_on:
       mongo: { condition: service_healthy }
 
@@ -131,6 +136,7 @@ services:
     volumes:
       - mongo:/data/db
       - ./tilbot/mongo-init.js:/docker-entrypoint-initdb.d/tilbot.js:ro
+    networks: [tilbot-db]
 
   # The researchers' system page (shell/monitor/system.py) reads Docker through this proxy, never directly:
   # Docker's own socket can do anything to the computer. The proxy passes on only reading the list of
@@ -155,6 +161,7 @@ services:
       retries: 3
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks: [docker]
 
   # Intent recognition for phase 3. start_shell.py turns on the profile only when project/knowledge.xlsx
   # exists, so a study without questions doesn't download the language model.
@@ -178,10 +185,24 @@ services:
     volumes:
       - models:/root/.cache/huggingface   # the model downloads once, then works offline
 
-# Tilbot reads its first admin password from a file; Docker makes that file from .env.
+# Tilbot reads its first admin password and its database password from files; Docker makes them from .env.
 secrets:
   tilbot_admin_password:
     environment: TILBOT_ADMIN_PASSWORD
+  db_tilbot_password:
+    environment: MONGO_TILBOT_PASSWORD
+
+# Who can reach whom: the arrows on the system page (shell/monitor/system.py), and no more.
+# A service taken over reaches only its own networks. "internal" networks have no internet.
+networks:
+  default:     # the shell, Tilbot's backend, the intent service, and a study's own services (project/compose.yaml)
+  web:         # Caddy and the three servers it passes requests to
+  shell-db:
+    internal: true
+  tilbot-db:
+    internal: true
+  docker:      # the shell and docker-proxy
+    internal: true
 
 volumes:
   static:

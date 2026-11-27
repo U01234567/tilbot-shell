@@ -7,7 +7,7 @@ Every command runs from the repository root. `start_shell.py` picks the right co
 
 - **Docker, running.** Docker Desktop on Windows and macOS, Docker Engine on Linux. Every command except `updates` needs it; `start_shell.py` says so when it isn't running.
 - **Python 3.11 or newer, and Git.**
-- **Free ports.** 80 and 443, and in development 8081 and 5432 on this computer. A web server or a Postgres you installed yourself can hold them; `up` then names the service that didn't start.
+- **Free ports.** 80, 443, and 8081 on this computer; in development also 5432. A web server or a Postgres you installed yourself can hold them; `up` then names the service that didn't start.
 
 ## Set up on a new computer
 
@@ -151,7 +151,15 @@ Some data goes by itself: sign-in attempts after 15 minutes, expired sign-in ses
 
 ## On a server
 
-Not described yet. `compose.yaml` is written for it (`SHELL_ENV=production`, a real `SHELL_HOST` and `BOT_HOST`, ports 80 and 443 open so Caddy can get certificates), but it has not been done once, and Tilbot's dashboard is not reachable there (known gap). The first deployment will write this section.
+Not described yet. `compose.yaml` is written for it (`SHELL_ENV=production`, a real `SHELL_HOST` and `BOT_HOST`, ports 80 and 443 open so Caddy can get certificates), but it has not been done once. The first deployment will write this section.
+
+Both dashboards are on port 8081 of the server itself, never on the internet. From your own computer, open an SSH tunnel and leave it running:
+
+```
+ssh -L 8081:127.0.0.1:8081 you@your-server
+```
+
+Then http://127.0.0.1:8081/researcher/ and http://127.0.0.1:8081/dashboard on your computer are the server's. Don't open port 8081 in the server's firewall: the tunnel is the way in.
 
 ## Keys
 
